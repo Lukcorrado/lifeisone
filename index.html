@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
+<title>Luk — Life Is One</title>
+<meta name="description" content="La vida es una. One life, undivided. The wall of Luk — builder, painter, musician, Amsterdam.">
+<meta property="og:title" content="Luk — Life Is One">
+<meta property="og:description" content="La vida es una. One life, undivided.">
+<meta property="og:type" content="profile">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   LIFE IS ONE — design tokens.
+   Change these six hues and the entire site re-tunes itself.
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  --ink:#0E0D0C;
+  --paper:#F7F3EA;
+  --mist:#9A938A;
+
+  --make:#2E5BFF;   /* code, products, the venture builder */
+  --sound:#FF4D2E;  /* music, vinyl */
+  --paint:#E4489B;  /* canvas, colour */
+  --voice:#F5A623;  /* podcast, words out loud */
+  --mind:#2F8F5B;   /* books, thinking */
+  --life:#7B5CFF;   /* Amsterdam, people, the rest of it */
+
+  --disp:"Instrument Serif",Iowan Old Style,Georgia,serif;
+  --ui:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+  --lift:0 18px 44px rgba(0,0,0,.34), 0 2px 8px rgba(0,0,0,.22);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:#0E0D0C}
+body{font-family:var(--ui);color:var(--paper);-webkit-font-smoothing:antialiased;
+     overscroll-behavior:none;touch-action:none}
+button{font-family:inherit}
+
+/* ── the room ───────────────────────────────────────────────── */
+#room{position:fixed;inset:0;overflow:hidden;cursor:grab;background:
+  radial-gradient(1400px 900px at 22% 12%, rgba(46,91,255,.10), transparent 62%),
+  radial-gradient(1200px 800px at 78% 22%, rgba(255,77,46,.09), transparent 60%),
+  radial-gradient(1100px 900px at 52% 88%, rgba(123,92,255,.10), transparent 62%),
+  #0E0D0C}
+#room.drag{cursor:grabbing}
+#room:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:3;
+  background:radial-gradient(circle at 50% 45%, transparent 42%, rgba(0,0,0,.55) 100%)}
+#room:after{content:"";position:fixed;inset:-50%;pointer-events:none;z-index:2;opacity:.05;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>")}
+#world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+
+/* ── regions ────────────────────────────────────────────────── */
+.region{position:absolute;border-radius:64px;pointer-events:none}
+.region .glow{position:absolute;inset:0;border-radius:inherit;opacity:.14;
+  filter:blur(90px);background:var(--c)}
+.region .ring{position:absolute;inset:0;border-radius:inherit;
+  border:1px dashed color-mix(in srgb,var(--c) 42%, transparent);opacity:.34}
+.region .label{position:absolute;left:44px;top:30px;font-family:var(--disp);
+  font-size:120px;line-height:.9;letter-spacing:-.03em;color:var(--c);opacity:.20;white-space:nowrap}
+.region .sub{position:absolute;left:48px;top:158px;font-size:13px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--c);opacity:.5;font-weight:600}
+
+/* ── posters ────────────────────────────────────────────────── */
+.card{position:absolute;border-radius:14px;box-shadow:var(--lift);overflow:hidden;
+  background:#151312;display:flex;flex-direction:column;
+  transition:box-shadow .2s ease,filter .2s ease}
+.card:hover{box-shadow:0 26px 60px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.3)}
+.card .hdr{height:0;overflow:hidden;flex:0 0 auto;display:flex;align-items:center;gap:7px;
+  padding:0 10px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;
+  color:rgba(255,255,255,.6);background:rgba(0,0,0,.4);transition:height .18s}
+body.edit .card .hdr{height:28px}
+.card .hdr .dot{width:7px;height:7px;border-radius:50%;background:var(--c,#fff)}
+.card .hdr .sp{flex:1}
+.card .hdr b{cursor:grab;flex:1;user-select:none}
+.card .hdr button{all:unset;cursor:pointer;padding:2px 6px;border-radius:5px;opacity:.65;font-size:12px}
+.card .hdr button:hover{opacity:1;background:rgba(255,255,255,.16)}
+.card .in{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.card .rz{position:absolute;right:0;bottom:0;width:22px;height:22px;cursor:nwse-resize;display:none;z-index:6}
+.card .rz:after{content:"";position:absolute;right:5px;bottom:5px;width:9px;height:9px;
+  border-right:2px solid #fff;border-bottom:2px solid #fff;opacity:.6}
+body.edit .card .rz{display:block}
+body.edit .card{cursor:default}
+
+/* media facade */
+.fa{position:relative;flex:1;display:flex;flex-direction:column;cursor:pointer;background:#0a0a0a}
+.fa .th{position:absolute;inset:0;background-size:cover;background-position:center}
+.fa .sc{position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(0,0,0,.1) 0%,rgba(0,0,0,.02) 38%,rgba(0,0,0,.86) 100%)}
+.fa .mt{position:relative;margin-top:auto;padding:12px 14px 14px}
+.fa .bd{display:inline-flex;align-items:center;gap:6px;font-size:9.5px;font-weight:800;
+  letter-spacing:.14em;text-transform:uppercase;padding:4px 9px;border-radius:99px;
+  background:rgba(255,255,255,.94);color:#111;margin-bottom:8px}
+.fa h3{margin:0;font-size:15px;line-height:1.25;font-weight:600;color:#fff;
+  text-shadow:0 1px 4px rgba(0,0,0,.7)}
+.fa .sb{font-size:11.5px;color:rgba(255,255,255,.8);margin-top:4px}
+.fa .pl{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:58px;height:58px;
+  border-radius:50%;background:rgba(255,255,255,.95);display:grid;place-items:center;
+  box-shadow:0 10px 28px rgba(0,0,0,.5);transition:transform .16s}
+.fa:hover .pl{transform:translate(-50%,-50%) scale(1.1)}
+.fa .pl:after{content:"";border-left:17px solid #111;border-top:11px solid transparent;
+  border-bottom:11px solid transparent;margin-left:5px}
+.fa.audio .pl:after{border:0;content:"♫";font-size:26px;color:#111;margin:0}
+.fa .hint{position:absolute;top:10px;right:10px;font-size:9px;letter-spacing:.12em;
+  text-transform:uppercase;color:#fff;background:rgba(0,0,0,.5);padding:4px 7px;border-radius:6px}
+iframe.live{border:0;flex:1;width:100%;height:100%;background:#000}
+
+/* link card */
+.lk{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:16px;
+  text-decoration:none;color:var(--paper);background:linear-gradient(160deg,#1b1917,#131110)}
+.lk .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+  font-weight:900;font-size:16px;color:#fff;background:var(--c,#444)}
+.lk h3{margin:12px 0 5px;font-size:16px;line-height:1.25;font-weight:600}
+.lk .dm{font-size:11.5px;color:var(--mist)}
+.lk .go{margin-top:12px;font-size:10px;font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--c,#fff)}
+
+/* text blocks */
+.tx{flex:1;padding:20px 22px;overflow:auto;outline:none}
+.tx.manifesto{font-family:var(--disp);font-size:30px;line-height:1.18;letter-spacing:-.02em}
+.tx.manifesto em{font-style:italic;color:var(--c,#fff)}
+.tx.note{font-family:var(--mono);font-size:13px;line-height:1.55;color:#191614}
+.tx.plain{font-size:15px;line-height:1.55;color:rgba(247,243,234,.9);display:flex;flex-direction:column;justify-content:center}
+.tx.manifesto{display:flex;flex-direction:column;justify-content:center}
+.tx.plain b{color:#fff}
+.imgc{flex:1;background-size:cover;background-position:center}
+
+/* ── chrome ─────────────────────────────────────────────────── */
+#nav{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:40;display:flex;gap:5px;
+  padding:6px;border-radius:100px;background:rgba(18,16,15,.82);backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.09);max-width:calc(100vw - 24px);overflow-x:auto;scrollbar-width:none}
+#nav::-webkit-scrollbar{display:none}
+.chip{all:unset;cursor:pointer;padding:8px 14px;border-radius:99px;font-size:11px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:rgba(247,243,234,.62);white-space:nowrap;
+  display:flex;align-items:center;gap:7px;transition:.16s}
+.chip i{width:7px;height:7px;border-radius:50%;background:var(--c);display:block}
+.chip:hover{color:#fff;background:rgba(255,255,255,.08)}
+.chip[aria-current="true"]{color:#0E0D0C;background:var(--paper)}
+.chip[aria-current="true"] i{box-shadow:0 0 0 2px rgba(0,0,0,.15)}
+
+#sig{position:fixed;left:18px;top:16px;z-index:40;display:flex;align-items:center;gap:10px;
+  padding:8px 14px 8px 10px;border-radius:14px;background:rgba(18,16,15,.82);
+  backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.09)}
+#sig .nm{font-family:var(--disp);font-size:19px;line-height:1;letter-spacing:-.01em}
+#sig .tg{font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--mist);margin-top:3px}
+
+#tools{position:fixed;right:18px;top:16px;z-index:40;display:flex;gap:5px;padding:6px;
+  border-radius:14px;background:rgba(18,16,15,.82);backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.09)}
+.tb{all:unset;cursor:pointer;padding:8px 11px;border-radius:9px;font-size:11.5px;font-weight:600;
+  color:rgba(247,243,234,.72);white-space:nowrap}
+.tb:hover{background:rgba(255,255,255,.1);color:#fff}
+.tb.on{background:var(--paper);color:#0E0D0C}
+
+#dock{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(140%);z-index:40;
+  display:flex;gap:6px;align-items:center;padding:7px;border-radius:16px;
+  background:rgba(18,16,15,.9);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);
+  transition:transform .28s cubic-bezier(.2,.9,.3,1);max-width:calc(100vw - 24px)}
+body.edit #dock{transform:translateX(-50%) translateY(0)}
+#dock input{all:unset;background:rgba(255,255,255,.07);padding:10px 13px;border-radius:10px;
+  width:min(38vw,330px);font-size:13.5px;color:var(--paper)}
+#dock input::placeholder{color:rgba(247,243,234,.35)}
+#dock select{all:unset;cursor:pointer;background:rgba(255,255,255,.07);padding:10px;border-radius:10px;
+  font-size:12px;color:var(--paper)}
+#dock select option{background:#1a1817}
+.pb{all:unset;cursor:pointer;padding:10px 13px;border-radius:10px;font-size:12.5px;font-weight:700;
+  background:rgba(255,255,255,.09);color:var(--paper);white-space:nowrap}
+.pb:hover{background:rgba(255,255,255,.18)}
+.pb.hero{background:var(--paper);color:#0E0D0C}
+
+#zoom{position:fixed;right:18px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:4px;
+  padding:5px;border-radius:12px;background:rgba(18,16,15,.82);backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.09)}
+#zoom button{all:unset;cursor:pointer;width:32px;height:30px;text-align:center;border-radius:8px;
+  font-size:14px;color:rgba(247,243,234,.75)}
+#zoom button:hover{background:rgba(255,255,255,.12);color:#fff}
+#zoom .lvl{font-size:9.5px;text-align:center;color:var(--mist);font-family:var(--mono);padding:3px 0}
+
+#tip{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:30;font-size:11.5px;
+  color:rgba(247,243,234,.4);pointer-events:none;letter-spacing:.02em}
+body.edit #tip{display:none}
+
+#toast{position:fixed;top:76px;left:50%;transform:translateX(-50%) translateY(-12px);z-index:60;
+  padding:11px 17px;border-radius:12px;background:var(--paper);color:#0E0D0C;font-size:13px;
+  font-weight:500;opacity:0;pointer-events:none;transition:.22s;box-shadow:var(--lift);max-width:82vw;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+#modal{position:fixed;inset:0;z-index:70;background:rgba(6,5,5,.72);backdrop-filter:blur(6px);
+  display:none;place-items:center;padding:22px}
+#modal.on{display:grid}
+#modal .sh{background:#161413;border:1px solid rgba(255,255,255,.12);border-radius:20px;
+  max-width:660px;width:100%;max-height:82vh;overflow:auto;padding:26px 28px;box-shadow:var(--lift)}
+#modal h2{font-family:var(--disp);font-size:26px;margin:0 0 12px;letter-spacing:-.01em}
+#modal p,#modal li{font-size:14px;line-height:1.6;color:rgba(247,243,234,.82)}
+#modal pre{background:#0b0a0a;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;
+  overflow:auto;font-family:var(--mono);font-size:11.5px;line-height:1.5;color:#c9e8d4;max-height:340px}
+#modal code{font-family:var(--mono);font-size:12.5px;background:rgba(255,255,255,.08);
+  padding:2px 6px;border-radius:5px}
+
+/* ── entry ──────────────────────────────────────────────────── */
+#entry{position:fixed;inset:0;z-index:90;background:#0E0D0C;display:grid;place-items:center;
+  transition:opacity .8s ease,visibility .8s}
+#entry.gone{opacity:0;visibility:hidden}
+#entry .c{text-align:center;padding:20px}
+#entry .es{font-family:var(--disp);font-style:italic;font-size:clamp(30px,6vw,56px);
+  letter-spacing:-.02em;opacity:0;animation:rise .9s .15s forwards}
+#entry .en{font-family:var(--disp);font-size:clamp(46px,11vw,120px);line-height:.94;
+  letter-spacing:-.045em;margin-top:6px;opacity:0;animation:rise .9s .45s forwards}
+#entry .ed{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--mist);
+  margin-top:20px;opacity:0;animation:rise .9s .8s forwards}
+#entry svg{margin-bottom:26px;opacity:0;animation:rise 1s 0s forwards}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@media(max-width:720px){
+  #sig .tg{display:none}
+  #dock input{width:44vw}
+  #nav{top:auto;bottom:76px}
+  #tip{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="entry"><div class="c">
+  <svg width="92" height="52" viewBox="0 0 92 52" fill="none" aria-hidden="true">
+    <path d="M2 26h26" stroke="#F7F3EA" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M28 26 46 6l18 20-18 20z" stroke="#F7F3EA" stroke-width="2" fill="none"/>
+    <path d="M64 26h26" stroke="#7B5CFF" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M64 20h26" stroke="#2E5BFF" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M64 14h26" stroke="#2F8F5B" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M64 32h26" stroke="#F5A623" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M64 38h26" stroke="#FF4D2E" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M64 44h26" stroke="#E4489B" stroke-width="2.4" stroke-linecap="round"/>
+  </svg>
+  <div class="es">La vida es una.</div>
+  <div class="en">LIFE IS ONE</div>
+  <div class="ed">Click anywhere to enter</div>
+</div></div>
+
+<div id="room"><div id="world"></div></div>
+
+<div id="sig">
+  <svg width="30" height="18" viewBox="0 0 92 52" fill="none" aria-hidden="true">
+    <path d="M2 26h26" stroke="#F7F3EA" stroke-width="3" stroke-linecap="round"/>
+    <path d="M28 26 46 6l18 20-18 20z" stroke="#F7F3EA" stroke-width="2.6" fill="none"/>
+    <path d="M64 14h26" stroke="#2F8F5B" stroke-width="3" stroke-linecap="round"/>
+    <path d="M64 20h26" stroke="#2E5BFF" stroke-width="3" stroke-linecap="round"/>
+    <path d="M64 26h26" stroke="#7B5CFF" stroke-width="3" stroke-linecap="round"/>
+    <path d="M64 32h26" stroke="#F5A623" stroke-width="3" stroke-linecap="round"/>
+    <path d="M64 38h26" stroke="#FF4D2E" stroke-width="3" stroke-linecap="round"/>
+    <path d="M64 44h26" stroke="#E4489B" stroke-width="3" stroke-linecap="round"/>
+  </svg>
+  <div><div class="nm" id="signame">Luk</div><div class="tg" id="sigtag">Life Is One · Amsterdam</div></div>
+</div>
+
+<nav id="nav"></nav>
+
+<div id="tools">
+  <button class="tb" id="tEdit">✎ Edit</button>
+  <button class="tb" id="tShare">Share</button>
+  <button class="tb" id="tCode">Config</button>
+  <button class="tb" id="tAbout">?</button>
+</div>
+
+<div id="dock">
+  <input id="dUrl" placeholder="Paste a link — song, video, post, campaign, anything you made">
+  <select id="dRegion"></select>
+  <button class="pb hero" id="dAdd">Pin</button>
+  <button class="pb" id="dNote">Note</button>
+  <button class="pb" id="dText">Words</button>
+  <button class="pb" id="dExport">⇩ Config</button>
+</div>
+
+<div id="zoom">
+  <button id="zIn">＋</button>
+  <div class="lvl" id="zLvl">100%</div>
+  <button id="zOut">－</button>
+  <button id="zFit" title="Fit everything">⤢</button>
+</div>
+
+<div id="tip">drag to move through the room · scroll to zoom · press <b>E</b> to edit</div>
+<div id="toast"></div>
+<div id="modal"><div class="sh" id="modalc"></div></div>
+
+<script src="muro.config.js"></script>
+<script src="muro.supabase.js" onerror="console.info('[muro] no supabase config — static mode')"></script>
+<script>
+if(!window.MURO_CONFIG){document.body.innerHTML="<p style='padding:40px;font:16px system-ui;color:#F7F3EA'>muro.config.js not found — keep it next to index.html.</p>";}
+/* ═══════════════════════════════════════════════════════════════
+   MURO engine. You should rarely need to touch this file —
+   muro.config.js is where your wall actually lives.
+   ═══════════════════════════════════════════════════════════════ */
+const CFG = window.MURO_CONFIG;
+const $ = s => document.querySelector(s);
+const world = $('#world'), room = $('#room');
+const RG = Object.fromEntries(CFG.regions.map(r => [r.key, r]));
+const uid = () => 'i' + Math.random().toString(36).slice(2, 8);
+let VIEW = { x: 0, y: 0, k: .5 }, Z = 100, EDIT = false;
+
+/* ── providers: URL in, embed out. Zero API keys. ───────────── */
+const P = {
+  youtube:{l:'YouTube',c:'#FF0033',kind:'video',r:16/9,
+    t:u=>/(?:youtube\.com\/(?:watch\?v=|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/.exec(u),
+    e:m=>`https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&rel=0`,
+    th:m=>`https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg`},
+  vimeo:{l:'Vimeo',c:'#1AB7EA',kind:'video',r:16/9,
+    t:u=>/vimeo\.com\/(\d+)/.exec(u), e:m=>`https://player.vimeo.com/video/${m[1]}?autoplay=1`},
+  spotify:{l:'Spotify',c:'#1DB954',kind:'audio',r:1.55,
+    t:u=>/open\.spotify\.com\/(?:intl-\w+\/)?(track|album|playlist|artist|episode|show)\/(\w+)/.exec(u),
+    e:m=>`https://open.spotify.com/embed/${m[1]}/${m[2]}`},
+  soundcloud:{l:'SoundCloud',c:'#FF5500',kind:'audio',r:2.1,
+    t:u=>/soundcloud\.com\/[\w-]+\/[\w-]+/.exec(u),
+    e:(m,u)=>`https://w.soundcloud.com/player/?url=${encodeURIComponent(u)}&color=%23ff4d2e&auto_play=true&show_comments=false`},
+  applemusic:{l:'Apple Music',c:'#FA2D48',kind:'audio',r:1.5,
+    t:u=>/music\.apple\.com\//.exec(u), e:(m,u)=>u.replace('music.apple.com','embed.music.apple.com')},
+  bandcamp:{l:'Bandcamp',c:'#629AA9',kind:'audio',r:1.4,t:u=>/\.bandcamp\.com\/(album|track)\//.exec(u)},
+  suno:{l:'Suno',c:'#EDEDED',kind:'audio',r:1.3,t:u=>/suno\.(com|ai)\/song\//.exec(u)},
+  instagram:{l:'Instagram',c:'#E4489B',kind:'post',r:.8,
+    t:u=>/instagram\.com\/(?:p|reel|tv)\/([\w-]+)/.exec(u),
+    e:m=>`https://www.instagram.com/p/${m[1]}/embed/captioned/`},
+  igprofile:{l:'Instagram',c:'#E4489B',kind:'page',r:1.2,t:u=>/instagram\.com\/?$|instagram\.com\/[\w.]+\/?$/.exec(u)},
+  tiktok:{l:'TikTok',c:'#EDEDED',kind:'video',r:.62,
+    t:u=>/tiktok\.com\/@[\w.-]+\/video\/(\d+)/.exec(u), e:m=>`https://www.tiktok.com/embed/v2/${m[1]}`},
+  twitch:{l:'Twitch',c:'#9146FF',kind:'video',r:16/9, t:u=>/twitch\.tv\/(\w+)\/?$/.exec(u),
+    e:m=>`https://player.twitch.tv/?channel=${m[1]}&parent=${location.hostname||'localhost'}&muted=true`},
+  kick:{l:'Kick',c:'#53FC18',kind:'video',r:16/9,t:u=>/kick\.com\/([\w-]+)\/?$/.exec(u),
+    e:m=>`https://player.kick.com/${m[1]}`},
+  mastodon:{l:'Mastodon',c:'#6364FF',kind:'post',r:1.4,
+    t:u=>/^https?:\/\/[\w.-]+\/@[\w.-]+\/(\d+)/.exec(u), e:(m,u)=>u+'/embed'},
+  bluesky:{l:'Bluesky',c:'#0085FF',kind:'post',r:1.5,t:u=>/bsky\.app\/profile\/[\w.:-]+\/post\//.exec(u)},
+  x:{l:'X',c:'#EDEDED',kind:'post',r:1.3,t:u=>/(?:twitter|x)\.com\/\w+\/status\//.exec(u)},
+  github:{l:'GitHub',c:'#8B95A8',kind:'page',r:1.35,t:u=>/github\.com\//.exec(u)},
+  kickstarter:{l:'Kickstarter',c:'#05CE78',kind:'page',r:1.15,
+    t:u=>/kickstarter\.com\/projects\/([\w-]+\/[\w-]+)/.exec(u),
+    e:m=>`https://www.kickstarter.com/projects/${m[1]}/widget/card.html`},
+  substack:{l:'Substack',c:'#FF6719',kind:'page',r:1.25,t:u=>/substack\.com\//.exec(u)},
+  calendly:{l:'Calendly',c:'#006BFF',kind:'page',r:.95,t:u=>/calendly\.com\/[\w-]/.exec(u),e:(m,u)=>u},
+  adult:{l:'Blocked',c:'#8B0000',kind:'page',r:1,t:u=>/(onlyfans|fansly)\.com/.exec(u),block:true},
+};
+const prov = u => { for (const k in P) { const m = P[k].t(u); if (m) return { ...P[k], key:k, m, url:u }; } return null; };
+const dom = u => { try { return new URL(u).hostname.replace(/^www\./,''); } catch { return u.slice(0,26); } };
+const esc = s => String(s ?? '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+
+/* ── camera ─────────────────────────────────────────────────── */
+function apply(anim){
+  world.style.transition = anim ? 'transform .72s cubic-bezier(.22,.9,.25,1)' : 'none';
+  world.style.transform = `translate(${VIEW.x}px,${VIEW.y}px) scale(${VIEW.k})`;
+  $('#zLvl').textContent = Math.round(VIEW.k * 100) + '%';
+}
+function frame(bx, by, bw, bh, anim = true, pad = 120){
+  const vw = innerWidth, vh = innerHeight;
+  const k = Math.min((vw - pad*2)/bw, (vh - pad*2)/bh, 1.15);
+  VIEW.k = Math.max(.12, k);
+  VIEW.x = vw/2 - (bx + bw/2) * VIEW.k;
+  VIEW.y = vh/2 - (by + bh/2) * VIEW.k;
+  apply(anim);
+}
+function bboxAll(){
+  const rs = CFG.regions;
+  const x1 = Math.min(...rs.map(r=>r.x)), y1 = Math.min(...rs.map(r=>r.y));
+  const x2 = Math.max(...rs.map(r=>r.x+r.w)), y2 = Math.max(...rs.map(r=>r.y+r.h));
+  return [x1,y1,x2-x1,y2-y1];
+}
+const fitAll = (anim=true) => frame(...bboxAll(), anim, 90);
+
+/* ── render ─────────────────────────────────────────────────── */
+function paint(){
+  world.innerHTML = '';
+  const [bx,by,bw,bh] = bboxAll();
+  world.style.width = (bx+bw+400)+'px'; world.style.height = (by+bh+400)+'px';
+  CFG.regions.forEach(r => {
+    const d = document.createElement('div');
+    d.className = 'region'; d.dataset.k = r.key;
+    d.style.cssText = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;--c:${r.color}`;
+    d.innerHTML = `<div class="glow"></div><div class="ring"></div>
+      <div class="label">${r.name}</div><div class="sub">${r.sub}</div>`;
+    world.appendChild(d);
+  });
+  CFG.items.forEach(drawItem);
+}
+function drawItem(it){
+  const r = RG[it.region] || RG.one;
+  let el = document.getElementById('c_'+it.id);
+  if (!el){ el = document.createElement('div'); el.className='card'; el.id='c_'+it.id; world.appendChild(el); }
+  const p = it.kind === 'link' ? prov(it.url) : null;
+  if (!it.h) it.h = Math.round(it.w / (p ? p.r : 1.3));
+  el.style.cssText = `left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;`
+    + `transform:rotate(${it.rot||0}deg);--c:${p ? p.c : r.color};z-index:${it.z||5}`;
+  el.innerHTML = `<div class="hdr"><span class="dot"></span><b>${esc(p?p.l:it.kind)}</b>
+      <button data-a="front" title="front">▲</button><button data-a="del" title="remove">✕</button></div>
+    <div class="in"></div><div class="rz"></div>`;
+  const box = el.querySelector('.in');
+
+  if (it.kind === 'words'){
+    const d = document.createElement('div');
+    d.className = 'tx ' + (it.tone === 'manifesto' ? 'manifesto' : 'plain');
+    d.style.setProperty('--c', r.color);
+    d.innerHTML = it.text || '';
+    d.contentEditable = 'false';
+    box.appendChild(d);
+    if (it.tone !== 'manifesto') el.style.background = 'linear-gradient(160deg,#1b1917,#131110)';
+  }
+  else if (it.kind === 'note'){
+    const d = document.createElement('div');
+    d.className = 'tx note'; d.textContent = it.text || '';
+    el.style.background = it.paper || '#F2E39B';
+    d.contentEditable = 'true';
+    d.addEventListener('input', () => it.text = d.textContent);
+    box.appendChild(d);
+  }
+  else if (it.kind === 'image'){
+    const d = document.createElement('div'); d.className = 'imgc';
+    if (it.url) d.style.backgroundImage = `url("${it.url}")`;
+    else d.style.cssText += `background:repeating-linear-gradient(45deg,${r.color}22 0 12px,transparent 12px 24px);
+      display:grid;place-items:center;color:${r.color};font-size:12px;letter-spacing:.16em;text-transform:uppercase`;
+    if (!it.url) d.textContent = 'add an image url';
+    box.appendChild(d);
+  }
+  else if (p && p.block){
+    const d = document.createElement('div'); d.className='tx plain';
+    d.innerHTML = '<b>Blocked at ingest.</b><br>Adult platforms pull your whole payment stack under Mastercard BRAM and Visa VIRP rules. Not worth it.';
+    box.appendChild(d);
+  }
+  else if (p && p.e && it.live){
+    const f = document.createElement('iframe'); f.className='live'; f.src = p.e(p.m, it.url);
+    f.loading='lazy'; f.allowFullscreen = true;
+    f.allow='autoplay; encrypted-media; picture-in-picture; clipboard-write; fullscreen';
+    f.referrerPolicy='strict-origin-when-cross-origin';
+    box.appendChild(f);
+  }
+  else if (p && p.e){
+    const d = document.createElement('div'); d.className = 'fa' + (p.kind==='audio'?' audio':'');
+    const th = it.thumb || (p.th ? p.th(p.m) : '');
+    d.innerHTML = `<div class="th" style="background-image:url('${th}');background-color:${p.c}22"></div>
+      <div class="sc"></div><div class="hint">click to play</div><div class="pl"></div>
+      <div class="mt"><span class="bd"><span style="width:7px;height:7px;border-radius:50%;background:${p.c};display:inline-block"></span>${p.l}</span>
+      <h3>${esc(it.title || p.l)}</h3>${it.sub?`<div class="sb">${esc(it.sub)}</div>`:''}</div>`;
+    d.addEventListener('click', e => { if (!EDIT){ it.live = true; drawItem(it); } });
+    box.appendChild(d);
+  }
+  else {
+    const a = document.createElement('a');
+    a.className='lk'; a.href = it.url || '#'; a.target='_blank'; a.rel='noopener me';
+    a.style.setProperty('--c', p ? p.c : r.color);
+    a.innerHTML = `<div><div class="ic" style="background:${p?p.c:r.color}">${(p?p.l:dom(it.url||'·'))[0].toUpperCase()}</div>
+      <h3>${esc(it.title || dom(it.url||''))}</h3><div class="dm">${esc(dom(it.url||''))}</div>
+      ${it.sub?`<div class="dm" style="margin-top:7px;opacity:.9">${esc(it.sub)}</div>`:''}</div>
+      <div class="go">Open ↗</div>`;
+    box.appendChild(a);
+  }
+  hookItem(el, it);
+}
+
+/* ── editing ────────────────────────────────────────────────── */
+function hookItem(el, it){
+  const handle = el.querySelector('.hdr b'), rz = el.querySelector('.rz');
+  handle.addEventListener('pointerdown', e => {
+    if (!EDIT) return;
+    e.preventDefault(); e.stopPropagation(); handle.setPointerCapture(e.pointerId);
+    const sx=e.clientX, sy=e.clientY, ox=it.x, oy=it.y, orot=it.rot||0;
+    it.z = ++Z; el.style.zIndex = it.z;
+    const mv = ev => {
+      if (ev.shiftKey) it.rot = orot + (ev.clientX - sx)/5;
+      else { it.x = ox + (ev.clientX-sx)/VIEW.k; it.y = oy + (ev.clientY-sy)/VIEW.k; }
+      el.style.left=it.x+'px'; el.style.top=it.y+'px'; el.style.transform=`rotate(${it.rot||0}deg)`;
+      const near = CFG.regions.find(r => it.x+it.w/2 > r.x && it.x+it.w/2 < r.x+r.w
+                                       && it.y+it.h/2 > r.y && it.y+it.h/2 < r.y+r.h);
+      if (near) it.region = near.key;
+    };
+    const up = () => { handle.removeEventListener('pointermove',mv); handle.removeEventListener('pointerup',up); };
+    handle.addEventListener('pointermove',mv); handle.addEventListener('pointerup',up);
+  });
+  el.querySelectorAll('.hdr button').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    if (b.dataset.a === 'del'){ CFG.items = CFG.items.filter(x => x.id !== it.id); el.remove(); toast('Removed'); }
+    if (b.dataset.a === 'front'){ it.z = ++Z; el.style.zIndex = it.z; }
+  }));
+  rz.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation(); rz.setPointerCapture(e.pointerId);
+    const sx=e.clientX, sy=e.clientY, ow=it.w, oh=it.h;
+    const mv = ev => {
+      it.w = Math.max(160, ow + (ev.clientX-sx)/VIEW.k);
+      it.h = Math.max(110, oh + (ev.clientY-sy)/VIEW.k);
+      el.style.width=it.w+'px'; el.style.height=it.h+'px';
+    };
+    const up = () => { rz.removeEventListener('pointermove',mv); rz.removeEventListener('pointerup',up); };
+    rz.addEventListener('pointermove',mv); rz.addEventListener('pointerup',up);
+  });
+}
+
+/* ── pan & zoom ─────────────────────────────────────────────── */
+room.addEventListener('pointerdown', e => {
+  if (e.target.closest('.card')) return;
+  room.classList.add('drag'); room.setPointerCapture(e.pointerId);
+  const sx=e.clientX, sy=e.clientY, ox=VIEW.x, oy=VIEW.y;
+  const mv = ev => { VIEW.x = ox + ev.clientX - sx; VIEW.y = oy + ev.clientY - sy; apply(false); };
+  const up = () => { room.classList.remove('drag');
+    room.removeEventListener('pointermove',mv); room.removeEventListener('pointerup',up); };
+  room.addEventListener('pointermove',mv); room.addEventListener('pointerup',up);
+});
+room.addEventListener('wheel', e => {
+  e.preventDefault();
+  const f = Math.exp(-e.deltaY * .0016);
+  const k2 = Math.min(2.2, Math.max(.1, VIEW.k * f));
+  VIEW.x = e.clientX - (e.clientX - VIEW.x) * (k2/VIEW.k);
+  VIEW.y = e.clientY - (e.clientY - VIEW.y) * (k2/VIEW.k);
+  VIEW.k = k2; apply(false);
+  document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-current','false'));
+}, { passive:false });
+let pinch = null;
+room.addEventListener('touchstart', e => {
+  if (e.touches.length === 2){
+    const [a,b] = e.touches;
+    pinch = { d: Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY), k: VIEW.k };
+  }
+}, { passive:true });
+room.addEventListener('touchmove', e => {
+  if (e.touches.length === 2 && pinch){
+    const [a,b] = e.touches;
+    const d = Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+    const cx=(a.clientX+b.clientX)/2, cy=(a.clientY+b.clientY)/2;
+    const k2 = Math.min(2.2, Math.max(.1, pinch.k * d/pinch.d));
+    VIEW.x = cx - (cx - VIEW.x)*(k2/VIEW.k); VIEW.y = cy - (cy - VIEW.y)*(k2/VIEW.k);
+    VIEW.k = k2; apply(false);
+  }
+}, { passive:true });
+room.addEventListener('touchend', () => pinch = null);
+const zoomBy = f => { const k2 = Math.min(2.2, Math.max(.1, VIEW.k*f));
+  VIEW.x = innerWidth/2 - (innerWidth/2 - VIEW.x)*(k2/VIEW.k);
+  VIEW.y = innerHeight/2 - (innerHeight/2 - VIEW.y)*(k2/VIEW.k); VIEW.k = k2; apply(true); };
+$('#zIn').onclick = () => zoomBy(1.35);
+$('#zOut').onclick = () => zoomBy(1/1.35);
+$('#zFit').onclick = () => { fitAll(); mark('all'); };
+
+/* ── nav ────────────────────────────────────────────────────── */
+function buildNav(){
+  const nav = $('#nav'), sel = $('#dRegion');
+  nav.innerHTML = `<button class="chip" data-k="all" style="--c:#F7F3EA"><i></i>Everything</button>`;
+  CFG.regions.filter(r => r.key !== 'one').forEach(r => {
+    nav.insertAdjacentHTML('beforeend',
+      `<button class="chip" data-k="${r.key}" style="--c:${r.color}"><i></i>${r.name}</button>`);
+  });
+  nav.insertAdjacentHTML('afterbegin',
+    `<button class="chip" data-k="one" style="--c:#F7F3EA"><i></i>One</button>`);
+  sel.innerHTML = CFG.regions.map(r => `<option value="${r.key}">${r.name}</option>`).join('');
+  nav.querySelectorAll('.chip').forEach(c => c.onclick = () => {
+    const k = c.dataset.k;
+    if (k === 'all') fitAll(); else { const r = RG[k]; frame(r.x, r.y, r.w, r.h); }
+    mark(k);
+  });
+}
+const mark = k => document.querySelectorAll('.chip').forEach(c =>
+  c.setAttribute('aria-current', String(c.dataset.k === k)));
+
+/* ── dock ───────────────────────────────────────────────────── */
+const centerWorld = () => ({
+  x: (innerWidth/2 - VIEW.x)/VIEW.k - 170,
+  y: (innerHeight/2 - VIEW.y)/VIEW.k - 120,
+});
+function addItem(o){
+  const c = centerWorld();
+  const it = { id:uid(), x:Math.round(c.x), y:Math.round(c.y), rot:+(Math.random()*4-2).toFixed(1),
+               region:$('#dRegion').value, z:++Z, ...o };
+  const near = CFG.regions.find(r => it.x > r.x && it.x < r.x+r.w && it.y > r.y && it.y < r.y+r.h);
+  if (near) it.region = near.key;
+  CFG.items.push(it); drawItem(it); return it;
+}
+$('#dAdd').onclick = () => {
+  let u = $('#dUrl').value.trim(); if (!u) return;
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  const p = prov(u);
+  if (p && p.block){ modal('Blocked on purpose', `<p>Adult platforms are blocked at the ingest layer. Allowing them puts your <b>entire</b> payments relationship under Mastercard BRAM adult-merchant registration and Visa VIRP monitoring — not just that one card.</p>`); return; }
+  addItem({ kind:'link', url:u, w:340, title:'', sub:'' });
+  $('#dUrl').value = '';
+  toast(p ? `Pinned a ${p.l} ${p.kind}` : `Pinned a link from ${dom(u)}`);
+};
+$('#dUrl').addEventListener('keydown', e => { if (e.key === 'Enter') $('#dAdd').click(); });
+$('#dNote').onclick = () => { addItem({ kind:'note', text:'…', w:260, h:180,
+  paper:['#F2E39B','#BFE9C8','#FFC6D9','#C7DEFF','#E5D4FF'][(Math.random()*5)|0] }); };
+$('#dText').onclick = () => addItem({ kind:'words', tone:'plain', text:'<b>Title.</b><br>Say the thing.', w:380, h:230 });
+
+/* ── edit toggle ────────────────────────────────────────────── */
+function setEdit(v){
+  EDIT = v; document.body.classList.toggle('edit', v);
+  $('#tEdit').classList.toggle('on', v);
+  $('#tEdit').textContent = v ? '✓ Done' : '✎ Edit';
+  if (v) toast('Edit mode — drag the bars, shift-drag to tilt, corner to resize');
+}
+$('#tEdit').onclick = () => setEdit(!EDIT);
+addEventListener('keydown', e => {
+  if (e.target.isContentEditable || e.target.tagName === 'INPUT') return;
+  if (e.key === 'e' || e.key === 'E') setEdit(!EDIT);
+  if (e.key === 'f' || e.key === 'F'){ fitAll(); mark('all'); }
+  if (e.key === 'Escape') $('#modal').classList.remove('on');
+});
+
+/* ── config round-trip: visual edits → the file you vibe-code ── */
+function toConfig(){
+  const q = s => JSON.stringify(s ?? '');
+  const line = it => {
+    const bits = [`id:${q(it.id)}`, `region:${q(it.region)}`, `kind:${q(it.kind)}`];
+    if (it.tone) bits.push(`tone:${q(it.tone)}`);
+    if (it.paper) bits.push(`paper:${q(it.paper)}`);
+    bits.push(`x:${Math.round(it.x)}`, `y:${Math.round(it.y)}`, `w:${Math.round(it.w)}`,
+              `h:${Math.round(it.h)}`, `rot:${+(it.rot||0).toFixed(1)}`);
+    if (it.url) bits.push(`url:${q(it.url)}`);
+    if (it.title) bits.push(`title:${q(it.title)}`);
+    if (it.sub) bits.push(`sub:${q(it.sub)}`);
+    if (it.thumb) bits.push(`thumb:${q(it.thumb)}`);
+    if (it.text) bits.push(`text:${q(it.text)}`);
+    return '    { ' + bits.join(', ') + ' },';
+  };
+  const reg = r => `    { key:${q(r.key)}, name:${q(r.name)}, sub:${q(r.sub)}, color:${q(r.color)}, `
+    + `x:${r.x}, y:${r.y}, w:${r.w}, h:${r.h} },`;
+  return `/* MURO — muro.config.js
+   Exported from the visual editor. Edit freely, save, refresh.
+   Every field here is documented in the original config file. */
+
+window.MURO_CONFIG = {
+
+  identity: ${JSON.stringify(CFG.identity, null, 2).replace(/\n/g, '\n  ')},
+
+  regions: [
+${CFG.regions.map(reg).join('\n')}
+  ],
+
+  items: [
+${CFG.items.map(line).join('\n')}
+  ],
+};
+`;
+}
+$('#dExport').onclick = () => {
+  const txt = toConfig();
+  const b = new Blob([txt], { type:'text/javascript' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'muro.config.js'; a.click();
+  toast('muro.config.js downloaded — drop it next to index.html');
+};
+$('#tCode').onclick = () => modal('Your wall, as code',
+  `<p>This is <code>muro.config.js</code> as it stands right now. Move something in edit mode and this
+   changes with it — visual editing and vibe coding are the same loop.</p>
+   <pre>${esc(toConfig())}</pre>
+   <p><button class="pb hero" onclick="document.getElementById('dExport').click()">⇩ Download it</button></p>`);
+
+/* ── share ──────────────────────────────────────────────────── */
+$('#tShare').onclick = async () => {
+  const s = JSON.stringify({ v:1, identity:CFG.identity, regions:CFG.regions, items:CFG.items });
+  let packed;
+  try {
+    const cs = new CompressionStream('gzip');
+    const buf = await new Response(new Blob([s]).stream().pipeThrough(cs)).arrayBuffer();
+    packed = 'g' + b64u(new Uint8Array(buf));
+  } catch { packed = 'p' + b64u(new TextEncoder().encode(s)); }
+  const url = location.origin + location.pathname + '#w=' + packed;
+  try { await navigator.clipboard.writeText(url); } catch {}
+  modal('Share this exact wall', `<p>Copied. The whole room — every card, every position — is inside this link.
+    No account, no database.</p><pre>${esc(url.length > 400 ? url.slice(0,400)+'…' : url)}</pre>
+    <p style="color:#9A938A;font-size:13px">${url.length} characters. When you're ready for
+    <code>lifeisone.co/yourname</code>, that's Postgres and about an hour of work.</p>`);
+};
+const b64u = b => btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const ub64u = s => Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+
+$('#tAbout').onclick = () => modal('About this room', `
+  <p><b>La vida es una.</b> The name is the Spanish saying, translated straight: you get one life.
+  So it doesn't divide into a job title, a degree, a bio line. One light, refracted — that's the mark.</p>
+  <p>Six wavelengths: <b>MAKE</b>, <b>SOUND</b>, <b>PAINT</b>, <b>VOICE</b>, <b>MIND</b>, <b>LIFE</b>, around a
+  centre called <b>ONE</b>. They're regions of a single continuous space, not separate pages —
+  you can put a song next to a business, because that's how it actually is.</p>
+  <ul>
+    <li><b>Drag</b> the background to move. <b>Scroll</b> or pinch to zoom. <b>F</b> fits everything.</li>
+    <li><b>E</b> opens edit mode: drag the bars, shift-drag to tilt, corner to resize, paste links in the dock.</li>
+    <li><b>Config</b> shows your wall as the file you can vibe-code against.</li>
+    <li>Nothing loads until you click it — no Meta or Google script runs on arrival.</li>
+  </ul>`);
+
+function modal(t, html){ $('#modalc').innerHTML = `<h2>${t}</h2>${html}
+  <p style="margin-top:18px"><button class="pb" onclick="document.getElementById('modal').classList.remove('on')">Close</button></p>`;
+  $('#modal').classList.add('on'); }
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') e.target.classList.remove('on'); });
+function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on');
+  clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2600); }
+
+/* ── boot ───────────────────────────────────────────────────── */
+(async function boot(){
+  const h = location.hash.slice(1);
+  if (h.startsWith('w=')){
+    try {
+      const raw = h.slice(2), bytes = ub64u(raw.slice(1));
+      const txt = raw[0] === 'g'
+        ? await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text()
+        : new TextDecoder().decode(bytes);
+      const d = JSON.parse(txt);
+      Object.assign(CFG, d);
+      CFG.regions.forEach(r => RG[r.key] = r);
+    } catch(e){ console.warn('bad share link', e); }
+  }
+  $('#signame').textContent = CFG.identity.name;
+  $('#sigtag').textContent = CFG.identity.tag;
+  document.title = CFG.identity.seoTitle || CFG.identity.name;
+  buildNav(); paint();
+  fitAll(false); mark('all');
+  let entered = false;
+  const enter = () => {
+    if (entered) return; entered = true;
+    clearTimeout(autoEnter);
+    $('#entry').classList.add('gone');
+    setTimeout(() => { const r = RG.one; frame(r.x, r.y, r.w, r.h); mark('one'); }, 240);
+  };
+  const autoEnter = setTimeout(enter, 4200);
+  $('#entry').addEventListener('click', enter, { once:true });
+  addEventListener('resize', () => apply(false));
+})();
+
+
+/* ═══════════════════════════════════════════════════════════════
+   LIVE LAYER — Supabase. Optional: if muro.supabase.js is missing
+   or still has placeholders, everything above keeps working static.
+   ═══════════════════════════════════════════════════════════════ */
+(async function live(){
+  const S = window.MURO_SUPABASE;
+  const configured = S && S.url && !S.url.includes('YOUR-PROJECT-REF') && S.anonKey && !S.anonKey.includes('YOUR-ANON');
+  if (!configured){ console.info('[muro] static mode — add muro.supabase.js to go live'); return; }
+
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+  const db = createClient(S.url, S.anonKey);
+  window.db = db;
+
+  /* which wall are we looking at? /luk  ·  /?h=luk  ·  /  → rootHandle */
+  const seg = location.pathname.replace(/^\/+|\/+$/g,'').split('/')[0].toLowerCase();
+  const qs  = new URLSearchParams(location.search).get('h');
+  const HANDLE = (qs || (seg && !/\.(html?|js|css|png|jpe?g|svg|ico|txt|json)$/.test(seg) ? seg : '') || S.rootHandle || '').toLowerCase();
+
+  let ME = null, MINE = false, ROW = null;
+
+  /* ── load ──────────────────────────────────────────────────── */
+  async function load(){
+    if (!HANDLE) return;
+    const { data, error } = await db.rpc('get_wall', { p_handle: HANDLE });
+    const row = Array.isArray(data) ? data[0] : data;
+    if (error || !row){
+      // not published (or not there yet) — if it's mine I can still see it
+      const { data: own } = await db.from('walls').select('*').eq('handle', HANDLE).maybeSingle();
+      if (!own) return;                       // fall back to muro.config.js
+      return hydrate(own);
+    }
+    hydrate(row);
+  }
+  function hydrate(row){
+    ROW = row;
+    if (row.identity && Object.keys(row.identity).length) CFG.identity = row.identity;
+    if (Array.isArray(row.regions) && row.regions.length){
+      CFG.regions = row.regions;
+      Object.keys(RG).forEach(k => delete RG[k]);
+      CFG.regions.forEach(r => RG[r.key] = r);
+    }
+    if (Array.isArray(row.items)) CFG.items = row.items;
+    document.title = CFG.identity.seoTitle || CFG.identity.name || 'MURO';
+    $('#signame').textContent = CFG.identity.name || '';
+    $('#sigtag').textContent  = CFG.identity.tag  || '';
+    buildNav(); paint(); fitAll(false); mark('all');
+  }
+
+  /* ── auth ──────────────────────────────────────────────────── */
+  async function refreshMe(){
+    const { data } = await db.auth.getUser();
+    ME = data?.user ?? null;
+    MINE = !!(ME && ROW && ROW.owner === ME.id);
+    if (ME && !ROW){                                    // signed in, wall not created yet
+      const { data: own } = await db.from('walls').select('*').eq('owner', ME.id).maybeSingle();
+      if (own && own.handle.toLowerCase() === HANDLE){ ROW = own; MINE = true; }
+    }
+    paintChrome();
+  }
+  db.auth.onAuthStateChange(() => refreshMe());
+
+  function paintChrome(){
+    document.getElementById('mSave')?.remove();
+    document.getElementById('mAuth')?.remove();
+    const tools = $('#tools');
+    const auth = document.createElement('button');
+    auth.className = 'tb'; auth.id = 'mAuth';
+    auth.textContent = ME ? '●' : 'Sign in';
+    auth.title = ME ? ME.email : 'Sign in to edit';
+    auth.onclick = ME ? accountSheet : signInSheet;
+    tools.appendChild(auth);
+
+    if (MINE || (ME && !ROW)){
+      const save = document.createElement('button');
+      save.className = 'tb on'; save.id = 'mSave';
+      save.textContent = ROW ? 'Save' : 'Publish';
+      save.onclick = ROW ? saveWall : claimSheet;
+      tools.insertBefore(save, tools.firstChild);
+      if (!document.getElementById('mUp')) addUploadButton();
+    }
+  }
+
+  /* ── sign in (magic link) ──────────────────────────────────── */
+  function signInSheet(){
+    modal('Sign in', `
+      <p>One email, one link, no password. Only the owner of a wall can change it —
+      everyone else just gets to look.</p>
+      <p><input id="mEmail" type="email" placeholder="you@email.com"
+         style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(247,243,234,.2);
+                background:rgba(255,255,255,.06);color:#F7F3EA;font:inherit;font-size:15px"></p>
+      <p><button class="pb hero" id="mSend">Send me the link</button></p>
+      <p style="font-size:13px;color:#9A938A">Signing in doesn't create anything. You'll need an
+      invite code to claim a handle.</p>`);
+    $('#mEmail').focus();
+    $('#mSend').onclick = async () => {
+      const email = $('#mEmail').value.trim();
+      if (!email) return;
+      $('#mSend').textContent = 'Sending…';
+      const { error } = await db.auth.signInWithOtp({
+        email, options: { emailRedirectTo: location.origin + location.pathname } });
+      modal(error ? 'That didn\'t send' : 'Check your email',
+        error ? `<p>${error.message}</p>` :
+        `<p>A link is on its way to <b>${email}</b>. Open it on this device and you'll land back here, signed in.</p>`);
+    };
+  }
+  function accountSheet(){
+    modal('You', `<p>Signed in as <b>${ME.email}</b>${ROW ? ` · owner of <b>${ROW.handle}</b>` : ''}.</p>
+      ${ROW ? `<p style="font-size:13px;color:#9A938A">${ROW.views ?? 0} views · last saved ${
+        ROW.updated_at ? new Date(ROW.updated_at).toLocaleString() : '—'}</p>` : ''}
+      <p><button class="pb" id="mOut">Sign out</button></p>`);
+    $('#mOut').onclick = async () => { await db.auth.signOut(); location.reload(); };
+  }
+
+  /* ── claim a handle ────────────────────────────────────────── */
+  function claimSheet(){
+    modal('Claim your MURO', `
+      <p>Pick the handle this room lives at, and paste the invite code you were given.</p>
+      <p style="display:flex;gap:8px;align-items:center">
+        <span style="color:#9A938A;font-family:var(--mono);font-size:13px">lifeisone.co/</span>
+        <input id="mH" placeholder="yourname" style="flex:1;padding:12px 14px;border-radius:10px;
+          border:1px solid rgba(247,243,234,.2);background:rgba(255,255,255,.06);color:#F7F3EA;font:inherit"></p>
+      <p><input id="mInv" placeholder="invite code" style="width:100%;padding:12px 14px;border-radius:10px;
+          border:1px solid rgba(247,243,234,.2);background:rgba(255,255,255,.06);color:#F7F3EA;font:inherit"></p>
+      <p><button class="pb hero" id="mGo">Claim it</button> <span id="mMsg" style="color:#9A938A;font-size:13px"></span></p>`);
+    $('#mGo').onclick = async () => {
+      const h = $('#mH').value.trim().toLowerCase(), code = $('#mInv').value.trim();
+      const msg = t => $('#mMsg').textContent = t;
+      if (!h) return msg('pick a handle');
+      const { data: free } = await db.rpc('handle_available', { p_handle: h });
+      if (!free) return msg('taken or not allowed');
+      if (code){
+        const { data: ok } = await db.rpc('claim_invite', { p_code: code });
+        if (!ok) msg('that code is used or invalid — trying anyway');
+      }
+      const { data, error } = await db.from('walls').insert({
+        handle: h, owner: ME.id, identity: CFG.identity,
+        regions: CFG.regions, items: CFG.items, published: true,
+      }).select().single();
+      if (error) return msg(error.message.includes('policy') ? 'you need a valid invite code' : error.message);
+      ROW = data; MINE = true; paintChrome();
+      modal('It\'s live', `<p>Your room is at <b>${location.origin}/${data.handle}</b>.</p>
+        <p>Press <code>E</code>, move things, hit <b>Save</b>. That's the whole loop from now on.</p>`);
+      history.replaceState({}, '', '/' + data.handle);
+    };
+  }
+
+  /* ── save ──────────────────────────────────────────────────── */
+  async function saveWall(){
+    const btn = $('#mSave'); btn.textContent = 'Saving…';
+    const { error } = await db.from('walls').update({
+      identity: CFG.identity, regions: CFG.regions,
+      items: CFG.items.map(({ live, ...rest }) => rest),   // don't persist "was playing"
+    }).eq('id', ROW.id);
+    btn.textContent = 'Save';
+    toast(error ? 'Save failed: ' + error.message : 'Saved');
+  }
+  addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 's' && MINE){ e.preventDefault(); saveWall(); }
+  });
+
+  /* ── image upload — for the paintings ──────────────────────── */
+  function addUploadButton(){
+    const dock = $('#dock');
+    const b = document.createElement('button');
+    b.className = 'pb'; b.id = 'mUp'; b.textContent = '↑ Image';
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.style.display = 'none';
+    b.onclick = () => inp.click();
+    inp.onchange = async () => {
+      for (const f of inp.files){
+        const path = `${ME.id}/${Date.now()}-${f.name.replace(/[^\w.-]/g,'_')}`;
+        const { error } = await db.storage.from('muro').upload(path, f, { cacheControl: '31536000' });
+        if (error){ toast('Upload failed: ' + error.message); continue; }
+        const { data } = db.storage.from('muro').getPublicUrl(path);
+        const img = new Image();
+        img.onload = () => { const it = addItem({ kind:'image', url:data.publicUrl, w:320 });
+          it.h = Math.round(320 * img.height / img.width); drawItem(it); };
+        img.src = data.publicUrl;
+      }
+      toast('Uploaded — drag it where it belongs, then Save');
+      inp.value = '';
+    };
+    dock.appendChild(b); dock.appendChild(inp);
+  }
+
+  /* ── enrich pasted links via the edge function ─────────────── */
+  const FN = `${S.url}/functions/v1/resolve`;
+  window.enrichItem = async function(it){
+    if (!it.url) return;
+    try {
+      const r = await fetch(FN, { method:'POST',
+        headers:{ 'content-type':'application/json', apikey:S.anonKey, Authorization:`Bearer ${S.anonKey}` },
+        body: JSON.stringify({ url: it.url }) });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j.title && !it.title) it.title = j.title;
+      if (j.thumb && !it.thumb) it.thumb = j.thumb;
+      if (j.desc  && !it.sub)   it.sub   = j.desc.slice(0, 120);
+      if (j.ratio && !it._sized){ it.h = Math.round(it.w / j.ratio); it._sized = true; }
+      drawItem(it);
+    } catch {}
+  };
+  const _add = $('#dAdd').onclick;
+  $('#dAdd').onclick = () => { const before = CFG.items.length; _add();
+    if (CFG.items.length > before) window.enrichItem(CFG.items[CFG.items.length - 1]); };
+
+  await load();
+  await refreshMe();
+  console.info('[muro] live · handle:', HANDLE);
+})();
+
+</script>
+</body></html>
