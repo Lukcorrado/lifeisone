@@ -184,7 +184,13 @@ body.edit .txw:focus,body.edit .tx.note:focus{outline:none;
 
 #sig{position:fixed;left:18px;top:16px;z-index:40;display:flex;align-items:center;gap:10px;
   padding:8px 14px 8px 10px;border-radius:14px;background:rgba(18,16,15,.82);
-  backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.09)}
+  backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.09);
+  cursor:pointer;transition:transform .18s cubic-bezier(.2,.9,.3,1),border-color .18s ease}
+#sig:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.22)}
+#sig:active{transform:translateY(0)}
+/* already home — the mark stops pretending to be a door */
+body.universe #sig{cursor:default}
+body.universe #sig:hover{transform:none;border-color:rgba(255,255,255,.09)}
 #sig .nm{font-family:var(--disp);font-size:19px;line-height:1;letter-spacing:-.01em}
 #sig .tg{font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--mist);margin-top:3px}
 
@@ -1420,6 +1426,17 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
 
   $('#tKnocks').onclick = knocksSheet;
   $('#tUni').onclick = () => openUniverse(true);
+
+  // The mark is the way home. No page load — the universe is already in here.
+  const sig = $('#sig');
+  sig.title = 'Back to the universe';
+  sig.setAttribute('role', 'button');
+  sig.setAttribute('tabindex', '0');
+  const goHome = () => { if (!document.body.classList.contains('universe')) openUniverse(true); };
+  sig.addEventListener('click', goHome);
+  sig.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); goHome(); }
+  });
   addEventListener('popstate', () => location.reload());
 
   /* ── drift ──────────────────────────────────────────────────── */
