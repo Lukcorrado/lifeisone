@@ -7,6 +7,12 @@ verify_jwt = false          # anonymous visitors' pasted links get resolved too
 [auth]
 # Magic links break silently if these are wrong (GO-LIVE step 6).
 site_url = "https://lifeisone.co"
+# Password rules, enforced by GoTrue itself — the browser check is only there
+# to give a kinder error. Length is what actually resists guessing, so the
+# floor is 10 rather than 8, with letters and digits and no symbol theatre.
+minimum_password_length = 10
+password_requirements = "letters_digits"
+
 additional_redirect_urls = [
   "http://localhost:8000",
   "https://lifeisone.vercel.app",

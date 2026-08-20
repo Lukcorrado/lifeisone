@@ -1415,35 +1415,108 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
     }
   }
 
-  /* ── sign in (magic link) ──────────────────────────────────── */
-  function signInSheet(){
+  /* ── sign in ───────────────────────────────────────────────────
+     Two doors to the same room: a password, or a link in your inbox.
+     The password is the everyday one; the link stays as the way back
+     in when you've forgotten it, which is why there is no separate
+     reset flow to build or to phish.
+     ──────────────────────────────────────────────────────────── */
+  const F = "width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(247,243,234,.2);background:rgba(255,255,255,.06);color:#F7F3EA;font:inherit;font-size:15px";
+
+  // Length does more for you than punctuation does. Ten characters with
+  // letters and digits is the floor; the copy nudges toward a passphrase,
+  // which is easier to remember AND harder to guess than "Passw0rd!".
+  const PW_MIN = 10;
+  function pwProblem(pw){
+    if (pw.length < PW_MIN) return `At least ${PW_MIN} characters — you have ${pw.length}.`;
+    if (!/[a-zA-Z]/.test(pw)) return 'Needs at least one letter.';
+    if (!/[0-9]/.test(pw))    return 'Needs at least one number.';
+    return null;
+  }
+
+  function signInSheet(mode){
+    const pw = mode !== 'link';
     modal('Sign in', `
-      <p>One email, one link, no password. Only the owner of a wall can change it —
-      everyone else just gets to look.</p>
-      <p><input id="mEmail" type="email" placeholder="you@email.com"
-         style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(247,243,234,.2);
-                background:rgba(255,255,255,.06);color:#F7F3EA;font:inherit;font-size:15px"></p>
-      <p><button class="pb hero" id="mSend">Send me the link</button></p>
-      <p style="font-size:13px;color:#9A938A">Signing in doesn't create anything. You'll need an
-      invite code to claim a handle.</p>`);
+      <p><input id="mEmail" type="email" autocomplete="username"
+         placeholder="you@email.com" style="${F}"></p>
+      ${pw ? `<p><input id="mPw" type="password" autocomplete="current-password"
+         placeholder="your password" style="${F}"></p>` : ''}
+      <p><button class="pb hero" id="mGo">${pw ? 'Sign in' : 'Send me a link'}</button>
+         <button class="pb" id="mAlt">${pw ? 'Email me a link instead' : 'Use a password'}</button></p>
+      <p id="mMsg" style="color:#EF476F;font-size:13px;min-height:18px"></p>
+      <p style="font-size:13px;color:#9A938A">New here? Sign in with a link first, then set a
+      password from your account. Signing in doesn't create anything — you still need an invite
+      code to claim a handle.</p>`);
     $('#mEmail').focus();
-    $('#mSend').onclick = async () => {
+    $('#mAlt').onclick = () => signInSheet(pw ? 'link' : 'pw');
+    $('#mGo').onclick = async () => {
       const email = $('#mEmail').value.trim();
-      if (!email) return;
-      $('#mSend').textContent = 'Sending…';
+      const msg = t => $('#mMsg').textContent = t;
+      if (!email) return msg('Your email first.');
+      $('#mGo').textContent = pw ? 'Signing in…' : 'Sending…';
+      if (pw){
+        const { error } = await db.auth.signInWithPassword({ email, password: $('#mPw').value });
+        $('#mGo').textContent = 'Sign in';
+        if (error) return msg(/Invalid login/i.test(error.message)
+          ? "That email and password don't match. Try the link instead?" : error.message);
+        $('#modal').classList.remove('on');
+        await refreshMe(); toast('Welcome back');
+        return;
+      }
       const { error } = await db.auth.signInWithOtp({
         email, options: { emailRedirectTo: location.origin + location.pathname } });
-      modal(error ? 'That didn\'t send' : 'Check your email',
+      modal(error ? "That didn't send" : 'Check your email',
         error ? `<p>${error.message}</p>` :
         `<p>A link is on its way to <b>${email}</b>. Open it on this device and you'll land back here, signed in.</p>`);
     };
   }
+
   function accountSheet(){
     modal('You', `<p>Signed in as <b>${ME.email}</b>${ROW ? ` · owner of <b>${ROW.handle}</b>` : ''}.</p>
       ${ROW ? `<p style="font-size:13px;color:#9A938A">${ROW.views ?? 0} views · last saved ${
         ROW.updated_at ? new Date(ROW.updated_at).toLocaleString() : '—'}</p>` : ''}
-      <p><button class="pb" id="mOut">Sign out</button></p>`);
+      <p><button class="pb" id="mPwSet">Set a password</button>
+         <button class="pb" id="mOut">Sign out</button></p>`);
     $('#mOut').onclick = async () => { await db.auth.signOut(); location.reload(); };
+    $('#mPwSet').onclick = passwordSheet;
+  }
+
+  /* ── choose a password ─────────────────────────────────────── */
+  function passwordSheet(){
+    modal('Set a password', `
+      <p>So you can get in without waiting for an email. The link keeps working either way —
+      it becomes your way back in if you forget this.</p>
+      <p><input id="pw1" type="password" autocomplete="new-password"
+         placeholder="new password" style="${F}"></p>
+      <p><input id="pw2" type="password" autocomplete="new-password"
+         placeholder="once more" style="${F}"></p>
+      <p id="pwHint" style="font-size:13px;color:#9A938A">At least ${PW_MIN} characters, with letters
+      and numbers. Three unrelated words and a number beats a short one full of symbols — longer is
+      what actually helps, and it's easier to remember.</p>
+      <p><button class="pb hero" id="pwGo">Save it</button></p>
+      <p id="pwMsg" style="color:#EF476F;font-size:13px;min-height:18px"></p>`);
+    $('#pw1').focus();
+    const live = () => {
+      const p = $('#pw1').value, bad = p ? pwProblem(p) : null;
+      $('#pwHint').style.color = !p ? '#9A938A' : (bad ? '#F5A623' : '#06D6A0');
+      $('#pwHint').textContent = !p
+        ? `At least ${PW_MIN} characters, with letters and numbers.`
+        : (bad || 'That will do nicely.');
+    };
+    $('#pw1').addEventListener('input', live);
+    $('#pwGo').onclick = async () => {
+      const a = $('#pw1').value, b = $('#pw2').value;
+      const msg = t => $('#pwMsg').textContent = t;
+      const bad = pwProblem(a);
+      if (bad)    return msg(bad);
+      if (a !== b) return msg("Those two don't match.");
+      $('#pwGo').textContent = 'Saving…';
+      const { error } = await db.auth.updateUser({ password: a });
+      $('#pwGo').textContent = 'Save it';
+      if (error) return msg(error.message);
+      $('#modal').classList.remove('on');
+      toast('Password set — you can sign in with it from now on');
+    };
   }
 
   /* ── claim a handle ────────────────────────────────────────── */
