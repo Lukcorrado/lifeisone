@@ -159,6 +159,13 @@ iframe.live{border:0;flex:1;width:100%;height:100%;background:#000}
 /* The centred column above makes a flex item of every inline child, which
    split each <em> onto its own line. All markup goes in one wrapper. */
 .tx > .txw{display:block;width:100%}
+/* a text surface should look writable the moment edit mode is on */
+body.edit .txw,body.edit .tx.note{cursor:text;border-radius:8px;
+  transition:box-shadow .16s ease,background .16s ease}
+body.edit .txw:hover,body.edit .tx.note:hover{box-shadow:0 0 0 1px rgba(247,243,234,.16)}
+body.edit .txw:focus,body.edit .tx.note:focus{outline:none;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--c,#F7F3EA) 60%,transparent);
+  background:rgba(255,255,255,.04)}
 .tx.plain b{color:#fff}
 .imgc{flex:1;background-size:cover;background-position:center}
 
@@ -495,7 +502,8 @@ function paint(){
 const TX_BASE = new WeakMap();
 function fitText(el){
   if (!el) return;
-  if (el.isContentEditable && document.activeElement === el) return;  // don't fight the typist
+  if (el.contains(document.activeElement) && document.activeElement.isContentEditable)
+    return;                                          // don't fight the typist mid-word
   let base = TX_BASE.get(el);
   if (base == null){ base = parseFloat(getComputedStyle(el).fontSize) || 15; TX_BASE.set(el, base); }
   let size = base;
@@ -530,8 +538,15 @@ function drawItem(it){
     const d = document.createElement('div');
     d.className = 'tx ' + (it.tone === 'manifesto' ? 'manifesto' : 'plain');
     d.style.setProperty('--c', r.color);
-    d.innerHTML = '<div class="txw">' + (it.text || '') + '</div>';
-    d.contentEditable = 'false';
+    const w = document.createElement('div');
+    w.className = 'txw';
+    w.innerHTML = it.text || '';
+    // The wrapper is what you type into, not .tx — editing .tx directly lets
+    // the browser dissolve the wrapper and the flex layout goes with it.
+    w.contentEditable = String(EDIT);
+    w.addEventListener('input',  () => { it.text = w.innerHTML; });
+    w.addEventListener('blur',   () => { it.text = w.innerHTML; fitText(d); });
+    d.appendChild(w);
     box.appendChild(d);
     fitText(d); TX_RO.observe(d);
     if (it.tone !== 'manifesto') el.style.background = 'linear-gradient(160deg,#1b1917,#131110)';
@@ -540,7 +555,7 @@ function drawItem(it){
     const d = document.createElement('div');
     d.className = 'tx note'; d.textContent = it.text || '';
     el.style.background = it.paper || '#F2E39B';
-    d.contentEditable = 'true';
+    d.contentEditable = String(EDIT);
     d.addEventListener('input', () => it.text = d.textContent);
     box.appendChild(d);
     fitText(d); TX_RO.observe(d);
@@ -790,7 +805,11 @@ function setEdit(v){
   EDIT = v; document.body.classList.toggle('edit', v);
   $('#tEdit').classList.toggle('on', v);
   $('#tEdit').textContent = v ? '✓ Done' : '✎ Edit';
-  if (v) toast('Edit mode — drag the bars, shift-drag to tilt, corner to resize');
+  // Words and notes are only writable while editing — otherwise a visitor
+  // can type into your wall, which reads as a bug even though it saves nothing.
+  document.querySelectorAll('.txw, .tx.note').forEach(t => t.contentEditable = String(v));
+  if (!v) document.querySelectorAll('.tx').forEach(fitText);
+  if (v) toast('Edit mode — click any text to write · drag the bars to move');
 }
 $('#tEdit').onclick = () => setEdit(!EDIT);
 addEventListener('keydown', e => {
