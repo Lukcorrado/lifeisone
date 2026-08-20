@@ -250,6 +250,66 @@ body.edit #tip{display:none}
 #modal code{font-family:var(--mono);font-size:12.5px;background:rgba(255,255,255,.08);
   padding:2px 6px;border-radius:5px}
 
+/* ── the universe ───────────────────────────────────────────────
+   Every claimed name in the collective, laid out on a phyllotaxis
+   spiral so the crowd stays a findable disc instead of a grid. Hover
+   lifts a name; clicking one either walks you in or knocks.
+   ─────────────────────────────────────────────────────────────── */
+#universe{position:fixed;inset:0;z-index:35;display:none;overflow:hidden;
+  cursor:grab;background:
+  radial-gradient(1200px 900px at 30% 20%, rgba(46,91,255,.09), transparent 60%),
+  radial-gradient(1000px 800px at 72% 74%, rgba(123,92,255,.10), transparent 60%),
+  #0B0A0A}
+body.universe #universe{display:block}
+body.universe #nav,body.universe #zoom,body.universe #dock,body.universe #tip,
+body.universe #room{display:none}
+#universe.drag{cursor:grabbing}
+#uspace{position:absolute;left:50%;top:50%;transform-origin:0 0;will-change:transform}
+#uspace:before{content:"";position:absolute;left:-190px;top:-190px;width:380px;height:380px;
+  border-radius:50%;border:1px dashed rgba(247,243,234,.10);pointer-events:none}
+.star{position:absolute;transform:translate(-50%,-50%);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  transition:transform .22s cubic-bezier(.2,.9,.3,1);white-space:nowrap}
+.star .nm{font-family:var(--disp);font-size:26px;letter-spacing:-.01em;color:rgba(247,243,234,.72);
+  transition:color .2s ease,text-shadow .2s ease}
+.star .hd{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--mist);opacity:0;
+  transition:opacity .2s ease}
+.star .st{position:absolute;top:-16px;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;
+  padding:3px 8px;border-radius:99px;opacity:0;transition:opacity .2s ease}
+.star:hover{transform:translate(-50%,-50%) scale(1.55);z-index:9}
+.star:hover .nm{color:#fff;text-shadow:0 0 34px rgba(247,243,234,.45)}
+.star:hover .hd,.star:hover .st{opacity:1}
+.star.mine .nm{color:var(--paper)}
+.star.mine .st{background:var(--paper);color:#0E0D0C;opacity:1}
+.star.granted .st{background:#06D6A0;color:#0E0D0C}
+.star.pending .st{background:#F5A623;color:#0E0D0C;opacity:1}
+.star.denied .st{background:#EF476F;color:#F7F3EA}
+.star.mine .nm,.star.granted .nm{color:#fff}
+#uhint{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:36;
+  font-size:11.5px;color:rgba(247,243,234,.42);pointer-events:none;text-align:center;
+  padding:0 16px}
+#ucount{position:fixed;left:18px;bottom:18px;z-index:36;font-family:var(--mono);
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mist)}
+/* the knock inbox badge */
+#tKnocks{position:relative}
+#tKnocks .cnt{position:absolute;top:1px;right:1px;min-width:15px;height:15px;padding:0 4px;
+  border-radius:99px;background:#EF476F;color:#fff;font-size:9px;font-weight:800;
+  display:grid;place-items:center}
+.kn{display:flex;align-items:center;gap:10px;padding:11px 0;
+  border-bottom:1px solid rgba(255,255,255,.08)}
+.kn:last-child{border-bottom:0}
+.kn .who{flex:1;min-width:0}
+.kn .who b{font-family:var(--disp);font-size:17px;font-weight:400}
+.kn .who span{display:block;font-size:12px;color:var(--mist);
+  overflow:hidden;text-overflow:ellipsis}
+@media(max-width:720px){
+  #universe{top:0}
+  .star .nm{font-size:21px}
+  #uhint{bottom:calc(126px + env(safe-area-inset-bottom));font-size:11px}
+  #ucount{left:12px;bottom:calc(126px + env(safe-area-inset-bottom))}
+  .kn{flex-wrap:wrap}
+}
+
 /* ── entry ──────────────────────────────────────────────────── */
 #entry{position:fixed;inset:0;z-index:90;background:#0E0D0C;display:grid;place-items:center;
   transition:opacity .8s ease,visibility .8s}
@@ -344,6 +404,10 @@ body.edit #tip{display:none}
 
 <div id="room"><div id="world"></div></div>
 
+<div id="universe"><div id="uspace"></div></div>
+<div id="uhint" style="display:none">drag to drift · hover a name · click to knock</div>
+<div id="ucount" style="display:none"></div>
+
 <div id="sig">
   <svg width="30" height="18" viewBox="0 0 92 52" fill="none" aria-hidden="true">
     <path d="M2 26h26" stroke="#F7F3EA" stroke-width="3" stroke-linecap="round"/>
@@ -361,6 +425,8 @@ body.edit #tip{display:none}
 <nav id="nav"></nav>
 
 <div id="tools">
+  <button class="tb" id="tUni" title="The universe">◎ Universe</button>
+  <button class="tb" id="tKnocks" style="display:none">Knocks</button>
   <button class="tb" id="tEdit">✎ Edit</button>
   <button class="tb" id="tShare">Share</button>
   <button class="tb" id="tCode">Config</button>
@@ -1006,7 +1072,7 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
 
   /* ── load ──────────────────────────────────────────────────── */
   async function load(){
-    if (!HANDLE) return;
+    if (!HANDLE){ await openUniverse(false); return; }   // the front door is everybody
     const { data, error } = await db.rpc('get_wall', { p_handle: HANDLE });
     const row = Array.isArray(data) ? data[0] : data;
     if (error || !row){
@@ -1031,6 +1097,7 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
     $('#sigtag').textContent  = CFG.identity.tag  || '';
     syncAllPub();
     buildNav(); paint(); fitAll(false); mark('all');
+    setTimeout(strangerBar, 2200);
   }
 
   /* ── auth ──────────────────────────────────────────────────── */
@@ -1043,6 +1110,7 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
       if (own && own.handle.toLowerCase() === HANDLE){ ROW = own; MINE = true; }
     }
     paintChrome();
+    refreshKnocks();
   }
   db.auth.onAuthStateChange(() => refreshMe());
 
@@ -1191,9 +1259,201 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
   $('#dAdd').onclick = () => { const before = CFG.items.length; _add();
     if (CFG.items.length > before) window.enrichItem(CFG.items[CFG.items.length - 1]); };
 
+  /* ══════════════════════════════════════════════════════════════
+     THE UNIVERSE — everyone who has claimed a room, and the door
+     protocol between them. Every decision about who may see what is
+     made in Postgres (directory / knock / respond_knock / get_wall);
+     this only draws the result and sends the asks.
+     ══════════════════════════════════════════════════════════════ */
+  const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+  const UV = { x:0, y:0, k:1 };
+  let STARS = [];
+
+  const uspace = document.getElementById('uspace');
+  const uni    = document.getElementById('universe');
+
+  function uapply(anim){
+    uspace.style.transition = anim ? 'transform .6s cubic-bezier(.22,.9,.25,1)' : 'none';
+    uspace.style.transform = `translate(${UV.x}px,${UV.y}px) scale(${UV.k})`;
+  }
+
+  // Phyllotaxis: the packing a sunflower uses. Keeps any number of names in a
+  // tight, even disc — nobody ends up marooned, and the newest sit just past
+  // the middle rather than at the end of a queue.
+  const seat = i => {
+    const r = 132 * Math.sqrt(i), a = i * GOLDEN;
+    return { x: Math.cos(a)*r, y: Math.sin(a)*r };
+  };
+
+  const LABEL = { mine:'you', granted:'open', pending:'knocked', denied:'not yet' };
+
+  async function openUniverse(push){
+    document.body.classList.add('universe');
+    document.getElementById('uhint').style.display = '';
+    document.getElementById('ucount').style.display = '';
+    $('#entry').classList.add('gone');
+    if (push) history.pushState({ u:1 }, '', '/');
+    const { data, error } = await db.rpc('directory');
+    if (error){ toast('Could not reach the universe'); return; }
+    STARS = data || [];
+    uspace.innerHTML = '';
+    STARS.forEach((w, i) => {
+      const p = seat(i);
+      const el = document.createElement('div');
+      el.className = 'star ' + (w.access || 'none');
+      el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+      el.innerHTML = `<div class="st">${LABEL[w.access] || 'knock'}</div>
+        <div class="nm">${esc(w.name)}</div>
+        <div class="hd">lifeisone.co/${esc(w.handle)}</div>`;
+      el.onclick = ev => { ev.stopPropagation(); tapStar(w); };
+      uspace.appendChild(el);
+    });
+    document.getElementById('ucount').textContent =
+      STARS.length + (STARS.length === 1 ? ' room' : ' rooms');
+    document.getElementById('uhint').textContent = ME
+      ? 'drag to drift · hover a name · click to knock'
+      : 'drag to drift · sign in to knock on a door';
+    UV.x = 0; UV.y = 0; UV.k = 1; uapply(false);
+  }
+
+  function closeUniverse(){
+    document.body.classList.remove('universe');
+    document.getElementById('uhint').style.display = 'none';
+    document.getElementById('ucount').style.display = 'none';
+  }
+
+  function tapStar(w){
+    if (w.access === 'mine' || w.access === 'granted'){ location.href = '/' + w.handle; return; }
+    if (!ME){
+      modal('Sign in to knock', `<p>Doors in here open from the inside. Sign in and
+        <b>${esc(w.name)}</b> can decide whether to let you through.</p>
+        <p><button class="pb hero" id="kSign">Sign in</button></p>`);
+      $('#kSign').onclick = () => { $('#modal').classList.remove('on'); signInSheet(); };
+      return;
+    }
+    if (w.access === 'pending'){
+      modal('Already knocked', `<p>You've knocked on <b>${esc(w.name)}</b>'s door.
+        Nothing more to do — it opens when they say so.</p>
+        <p style="color:#9A938A;font-size:13px">Meanwhile you can see their
+        <b>ONE</b> circle, which is public.</p>
+        <p><button class="pb" id="kPeek">See their ONE</button></p>`);
+      $('#kPeek').onclick = () => location.href = '/' + w.handle;
+      return;
+    }
+    knockSheet(w);
+  }
+
+  function knockSheet(w){
+    modal('Knock on ' + esc(w.name) + "'s door", `
+      <p>They'll see that it was you. If they open it, you can walk into their
+      whole room — not just the public circle — until they change their mind.</p>
+      <p><input id="kNote" maxlength="240" placeholder="say something (optional) — e.g. it's your sister"
+        style="width:100%;padding:12px 14px;border-radius:12px;
+        border:1px solid rgba(247,243,234,.2);background:rgba(255,255,255,.06);
+        color:#F7F3EA;font:inherit;font-size:15px"></p>
+      <p><button class="pb hero" id="kGo">Knock</button>
+         <button class="pb" id="kPeek2">Just see their ONE</button></p>
+      <p id="kMsg" style="color:#9A938A;font-size:13px"></p>`);
+    $('#kPeek2').onclick = () => location.href = '/' + w.handle;
+    $('#kGo').onclick = async () => {
+      $('#kGo').textContent = 'Knocking…';
+      const { data, error } = await db.rpc('knock',
+        { p_handle: w.handle, p_note: $('#kNote').value.trim() || null });
+      const said = error ? 'error' : data;
+      const HOW = {
+        'knocked'             : 'Knocked. It opens when they say so.',
+        'already-knocked'     : 'You had already knocked — still waiting.',
+        'already-in'          : "You're already in. Go on through.",
+        'claim-a-handle-first': 'Claim your own handle first — doors open both ways.',
+        'no-such-wall'        : 'That room has gone.',
+        'thats-you'           : "That's your own door.",
+        'sign-in-required'    : 'Sign in first.',
+      };
+      $('#modal').classList.remove('on');
+      toast(HOW[said] || 'Something went wrong knocking');
+      if (said === 'knocked' || said === 'already-in') openUniverse(false);
+    };
+  }
+
+  /* ── who is at my door ──────────────────────────────────────── */
+  async function refreshKnocks(){
+    const btn = $('#tKnocks');
+    if (!ME || !ROW){ btn.style.display = 'none'; return; }
+    const { data } = await db.rpc('knocks');
+    const rows = data || [];
+    const waiting = rows.filter(r => r.status === 'pending').length;
+    btn.style.display = '';
+    btn.innerHTML = 'Knocks' + (waiting ? `<span class="cnt">${waiting}</span>` : '');
+    btn._rows = rows;
+  }
+
+  function knocksSheet(){
+    const rows = $('#tKnocks')._rows || [];
+    const pend = rows.filter(r => r.status === 'pending');
+    const open = rows.filter(r => r.status === 'granted');
+    const row = (r, actions) => `<div class="kn" data-id="${r.id}">
+        <div class="who"><b>${esc(r.name)}</b>
+          <span>lifeisone.co/${esc(r.handle)}${r.note ? ' · “' + esc(r.note) + '”' : ''}</span></div>
+        ${actions}</div>`;
+    modal('Your door', `
+      ${pend.length ? '<h3>Waiting</h3>' + pend.map(r => row(r,
+        `<button class="pb hero" data-y="${r.id}">Come in</button>
+         <button class="pb" data-n="${r.id}">Not yet</button>`)).join('') : ''}
+      ${open.length ? '<h3>Have the key</h3>' + open.map(r => row(r,
+        `<button class="pb" data-rv="${r.id}">Revoke</button>`)).join('') : ''}
+      ${!pend.length && !open.length
+        ? '<p>Nobody at the door yet. When someone in the collective clicks your name in the universe, they land here.</p>'
+        : ''}`);
+    $('#modalc').querySelectorAll('[data-y],[data-n],[data-rv]').forEach(b => b.onclick = async () => {
+      b.textContent = '…';
+      const id = b.dataset.y || b.dataset.n || b.dataset.rv;
+      const fn = b.dataset.rv ? ['revoke_access', { p_id:id }]
+                              : ['respond_knock', { p_id:id, p_accept: !!b.dataset.y }];
+      await db.rpc(fn[0], fn[1]);
+      await refreshKnocks();
+      $('#modal').classList.remove('on');
+      toast(b.dataset.y ? 'Opened — they can walk in now'
+           : b.dataset.n ? 'Left closed'
+           : 'Revoked — they are back outside');
+    });
+  }
+
+  $('#tKnocks').onclick = knocksSheet;
+  $('#tUni').onclick = () => openUniverse(true);
+  addEventListener('popstate', () => location.reload());
+
+  /* ── drift ──────────────────────────────────────────────────── */
+  uni.addEventListener('pointerdown', e => {
+    if (e.target.closest('.star')) return;
+    uni.classList.add('drag'); uni.setPointerCapture(e.pointerId);
+    const sx=e.clientX, sy=e.clientY, ox=UV.x, oy=UV.y;
+    const mv = ev => { UV.x = ox + ev.clientX - sx; UV.y = oy + ev.clientY - sy; uapply(false); };
+    const up = () => { uni.classList.remove('drag');
+      uni.removeEventListener('pointermove',mv); uni.removeEventListener('pointerup',up); };
+    uni.addEventListener('pointermove',mv); uni.addEventListener('pointerup',up);
+  });
+  uni.addEventListener('wheel', e => {
+    e.preventDefault();
+    UV.k = Math.min(2.4, Math.max(.25, UV.k * Math.exp(-e.deltaY * .0016)));
+    uapply(false);
+  }, { passive:false });
+
+  /* if you are looking at someone's public circle, say so ────── */
+  function strangerBar(){
+    if (!ROW || ROW.access === 'mine' || ROW.access === 'granted') return;
+    const n = CFG.identity.name || HANDLE;
+    toast(`You're seeing ${n}'s public ONE — knock to see the rest`);
+  }
+
+  window.openUniverse = openUniverse;
+  window.refreshKnocks = refreshKnocks;
+  window.strangerBar = strangerBar;
+
+  // Boot last: load() may open the universe, which closes over the consts above.
   await load();
   await refreshMe();
-  console.info('[muro] live · handle:', HANDLE);
+
+  console.info('[muro] live · handle:', HANDLE || '(universe)');
 })();
 
 </script>
