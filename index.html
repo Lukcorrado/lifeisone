@@ -1302,15 +1302,27 @@ function collectiveSheet(){
 $('#dLock').onclick = newLock;
 $('#tAbout').onclick = collectiveSheet;
 
-/* The invitation greets you on arrival — every arrival, not just the first.
-   Once per page load, so clicking the mark to fly home mid-session doesn't
-   nag you. The ? button reopens it whenever. */
+/* The invitation is for people who have just found the place. It shows once,
+   the first time a browser ever arrives, and then gets out of the way — it
+   lives in your account menu and behind ? from then on.
+
+   Two things had it appearing over and over: walking from the universe into
+   a room is a fresh page load, and there was nothing remembering you had
+   already read it. */
 let WELCOMED = false;
-function welcomeOnce(delay){
+async function welcomeOnce(delay){
   if (WELCOMED) return;
   WELCOMED = true;
-  setTimeout(() => { if (!$('#modal').classList.contains('on')) collectiveSheet(); },
-             delay == null ? 1500 : delay);
+  // Anyone signed in has been here before, by definition.
+  try {
+    if (window.db && (await db.auth.getSession()).data.session) return;
+  } catch {}
+  try { if (localStorage.getItem('muro.read') === '1') return; } catch {}
+  setTimeout(() => {
+    if ($('#modal').classList.contains('on')) return;
+    collectiveSheet();
+    try { localStorage.setItem('muro.read', '1'); } catch {}
+  }, delay == null ? 1500 : delay);
 }
 
 function modal(t, html, foot){
@@ -1507,10 +1519,12 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
     modal('You', `<p>Signed in as <b>${ME.email}</b>${ROW ? ` · owner of <b>${ROW.handle}</b>` : ''}.</p>
       ${ROW ? `<p style="font-size:13px;color:#9A938A">${ROW.views ?? 0} views · last saved ${
         ROW.updated_at ? new Date(ROW.updated_at).toLocaleString() : '—'}</p>` : ''}
-      <p><button class="pb" id="mPwSet">Set a password</button>
+      <p><button class="pb" id="mGuide">Collective guidelines</button>
+         <button class="pb" id="mPwSet">Set a password</button>
          <button class="pb" id="mOut">Sign out</button></p>`);
     $('#mOut').onclick = async () => { await db.auth.signOut(); location.reload(); };
     $('#mPwSet').onclick = passwordSheet;
+    $('#mGuide').onclick = collectiveSheet;
   }
 
   /* ── choose a password ─────────────────────────────────────── */
