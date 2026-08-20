@@ -1,5 +1,5 @@
 # Filled in by `supabase link --project-ref <ref>`. Safe to commit.
-project_id = "REPLACE_WITH_YOUR_PROJECT_REF"
+project_id = "llxuoaywxohqlfswaafq"
 
 [functions.resolve]
 verify_jwt = false          # anonymous visitors' pasted links get resolved too
