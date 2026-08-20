@@ -301,6 +301,15 @@ body.edit #tip{display:none}
   overflow:auto;font-family:var(--mono);font-size:11.5px;line-height:1.5;color:#c9e8d4;max-height:340px}
 #modal code{font-family:var(--mono);font-size:12.5px;background:rgba(255,255,255,.08);
   padding:2px 6px;border-radius:5px}
+#modal .lay{margin:12px 0 2px;border-left:2px solid rgba(247,243,234,.14);padding-left:15px}
+#modal .lay > div{margin:11px 0}
+#modal .lay b{font-family:var(--disp);font-weight:400;font-size:19px;display:block;
+  letter-spacing:-.01em}
+#modal .lay b i{font-style:normal;font-size:11px;font-family:var(--ui);font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;margin-left:9px;padding:3px 8px;border-radius:99px;
+  vertical-align:2px}
+#modal .lay span{display:block;font-size:13.5px;line-height:1.55;color:rgba(247,243,234,.7);
+  margin-top:3px}
 .mfoot{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:22px}
 /* Violet over blue: blue reads as a software CTA, violet is the colour LIFE
    already carries and sits with the starfield instead of fighting it. */
@@ -1242,27 +1251,50 @@ function collectiveSheet(){
   <b>One</b> — regions of a single continuous space, not separate pages. You can hang a song next
   to a business, because that's how it actually is.</p>
 
-  <h3>How it works</h3>
-  <p>Everyone here gets a wall at <code>lifeisone.co/yourname</code> and arranges it themselves.
-  No feed. No ranking. Nothing decides what surfaces except the person who built the room.</p>
-  <p>The circle in the middle — <b>ONE</b> — is the only part anyone else can see. Drag something
-  into it and it goes live to the network. Drag it back out and it's yours again. Everything
-  outside the circle never leaves your own room.</p>
+  <h3>The universe</h3>
+  <p>The first thing you see is everyone. Each room in the collective is a name out there in the
+  dark — bring one closer by hovering it, knock by clicking it. The mark in the corner brings you
+  back out here from anywhere.</p>
+
+  <h3>Your room has three depths</h3>
+  <p>Everyone gets a wall at <code>lifeisone.co/yourname</code> and arranges it themselves. No feed,
+  no ranking, nothing deciding what surfaces except the person who built the room. What differs is
+  who can stand where:</p>
+  <div class="lay">
+    <div><b>ONE<i style="background:#F7F3EA;color:#0E0D0C">anyone</i></b>
+      <span>The circle in the middle — your shop window. Drag something into it and it goes live to
+      the whole network, strangers included. Drag it back out and it's yours again.</span></div>
+    <div><b>the room<i style="background:#06D6A0;color:#0E0D0C">people you let in</i></b>
+      <span>Everything around the circle. Nobody sees it until you open the door to them, and you
+      can close it again whenever you like.</span></div>
+    <div><b>RAÍZ<i style="background:#8A7B6B;color:#0E0D0C">nobody</i></b>
+      <span>Ground you lock with six digits. It's encrypted in your own browser, so it stays dark
+      even to the people you've let in — and the database only ever holds letters it can't read.
+      Which is also why a forgotten code can't be recovered by anyone, including us.</span></div>
+  </div>
+
+  <h3>Knocking</h3>
+  <p>Clicking a name knocks on that door. They decide, in their own time, whether to open it — and
+  once they have, you can walk in whenever you like without asking again, until they change their
+  mind. It runs one way only: letting someone into your room tells you nothing about theirs.</p>
 
   <h3>How you get in</h3>
-  <p>Someone already here hands you a code. That's the whole gate — not exclusivity, just
-  growing slowly enough to stay a room instead of a crowd. If you're reading this and you want
-  one, ask whoever sent you the link.</p>
+  <p>Someone already here hands you a code. That's the whole gate — not exclusivity, just growing
+  slowly enough to stay a room instead of a crowd. If you're reading this and you want one, ask
+  whoever sent you the link.</p>
 
   <h3>Moving around</h3>
   <ul>
     ${touch
-      ? `<li><b>Drag</b> anywhere to move · <b>pinch</b> to zoom · <b>⤢</b> up top fits everything</li>
+      ? `<li><b>Drag</b> to move · <b>pinch</b> to zoom · <b>⤢</b> up top fits everything</li>
          <li>Tap a colour along the bottom to travel to that region</li>
+         <li><b>Edit</b> to move things and write in them; <b>Save</b> keeps it</li>
          <li>Tap a card to open it — nothing loads until you do</li>`
       : `<li><b>Drag</b> the background to move · <b>scroll</b> to zoom · <b>F</b> fits everything</li>
-         <li><b>E</b> opens edit mode: drag the bars, shift-drag to tilt, corner to resize</li>
-         <li><b>Config</b> hands you your wall back as a file you can vibe-code against</li>`}
+         <li><b>E</b> opens edit mode: drag a card by its bar, shift-drag to tilt, corner to resize —
+             and click straight into any text to write</li>
+         <li>Regions move too: drag a region by its name and its cards travel with it</li>
+         <li><b>⬤ RAÍZ</b> in the dock buries a new locked patch wherever you're looking</li>`}
     <li>No Meta or Google script runs when you arrive. That's a privacy decision and a speed one at once.</li>
   </ul>`,
   `<button class="pb welcome" data-x>Welcome</button>`);
