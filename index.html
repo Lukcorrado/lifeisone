@@ -123,8 +123,12 @@ iframe.live{border:0;flex:1;width:100%;height:100%;background:#000}
 .tx.manifesto{font-family:var(--disp);font-size:30px;line-height:1.18;letter-spacing:-.02em}
 .tx.manifesto em{font-style:italic;color:var(--c,#fff)}
 .tx.note{font-family:var(--mono);font-size:13px;line-height:1.55;color:#191614}
-.tx.plain{font-size:15px;line-height:1.55;color:rgba(247,243,234,.9);display:flex;flex-direction:column;justify-content:center}
-.tx.manifesto{display:flex;flex-direction:column;justify-content:center}
+.tx.plain{font-size:15px;line-height:1.55;color:rgba(247,243,234,.9);display:flex;flex-direction:column;
+  justify-content:safe center}
+.tx.manifesto{display:flex;flex-direction:column;justify-content:safe center}
+/* The centred column above makes a flex item of every inline child, which
+   split each <em> onto its own line. All markup goes in one wrapper. */
+.tx > .txw{display:block;width:100%}
 .tx.plain b{color:#fff}
 .imgc{flex:1;background-size:cover;background-position:center}
 
@@ -449,6 +453,32 @@ function paint(){
   });
   CFG.items.forEach(drawItem);
 }
+/* ── text that fits its card ─────────────────────────────────────
+   Cards are hand-sized and the words are hand-written, so a block will
+   sometimes be taller than the box it lives in. Scrolling inside a card
+   is a terrible way to read a manifesto — shrink the type instead, down
+   to a floor, and only give up (and scroll) past that.
+   ──────────────────────────────────────────────────────────────── */
+const TX_BASE = new WeakMap();
+function fitText(el){
+  if (!el) return;
+  if (el.isContentEditable && document.activeElement === el) return;  // don't fight the typist
+  let base = TX_BASE.get(el);
+  if (base == null){ base = parseFloat(getComputedStyle(el).fontSize) || 15; TX_BASE.set(el, base); }
+  let size = base;
+  el.style.fontSize = size + 'px';
+  const floor = base * .55;
+  for (let i = 0; i < 40 && size > floor; i++){
+    if (el.scrollHeight <= el.clientHeight + 1) break;
+    size -= Math.max(.5, size * .05);
+    el.style.fontSize = size + 'px';
+  }
+}
+const refitAll = () => document.querySelectorAll('.tx').forEach(fitText);
+// Instrument Serif arrives after first paint and changes every metric.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(refitAll);
+// Resizing a card in edit mode has to re-fit too.
+const TX_RO = new ResizeObserver(es => es.forEach(e => fitText(e.target)));
 function drawItem(it){
   const r = RG[it.region] || RG.one;
   let el = document.getElementById('c_'+it.id);
@@ -466,9 +496,10 @@ function drawItem(it){
     const d = document.createElement('div');
     d.className = 'tx ' + (it.tone === 'manifesto' ? 'manifesto' : 'plain');
     d.style.setProperty('--c', r.color);
-    d.innerHTML = it.text || '';
+    d.innerHTML = '<div class="txw">' + (it.text || '') + '</div>';
     d.contentEditable = 'false';
     box.appendChild(d);
+    fitText(d); TX_RO.observe(d);
     if (it.tone !== 'manifesto') el.style.background = 'linear-gradient(160deg,#1b1917,#131110)';
   }
   else if (it.kind === 'note'){
@@ -478,6 +509,7 @@ function drawItem(it){
     d.contentEditable = 'true';
     d.addEventListener('input', () => it.text = d.textContent);
     box.appendChild(d);
+    fitText(d); TX_RO.observe(d);
   }
   else if (it.kind === 'image'){
     const d = document.createElement('div'); d.className = 'imgc';
@@ -489,7 +521,7 @@ function drawItem(it){
   }
   else if (p && p.block){
     const d = document.createElement('div'); d.className='tx plain';
-    d.innerHTML = '<b>Blocked at ingest.</b><br>Adult platforms pull your whole payment stack under Mastercard BRAM and Visa VIRP rules. Not worth it.';
+    d.innerHTML = '<div class="txw"><b>Blocked at ingest.</b><br>Adult platforms pull your whole payment stack under Mastercard BRAM and Visa VIRP rules. Not worth it.</div>';
     box.appendChild(d);
   }
   else if (p && p.e && it.live){
