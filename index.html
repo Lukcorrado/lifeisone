@@ -1011,6 +1011,17 @@ function collectiveSheet(){
 }
 $('#tAbout').onclick = collectiveSheet;
 
+/* The invitation greets you on arrival — every arrival, not just the first.
+   Once per page load, so clicking the mark to fly home mid-session doesn't
+   nag you. The ? button reopens it whenever. */
+let WELCOMED = false;
+function welcomeOnce(delay){
+  if (WELCOMED) return;
+  WELCOMED = true;
+  setTimeout(() => { if (!$('#modal').classList.contains('on')) collectiveSheet(); },
+             delay == null ? 1500 : delay);
+}
+
 function modal(t, html){ $('#modalc').innerHTML = `<h2>${t}</h2>${html}
   <p style="margin-top:18px"><button class="pb" onclick="document.getElementById('modal').classList.remove('on')">Close</button></p>`;
   $('#modal').classList.add('on'); }
@@ -1042,13 +1053,9 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
     if (entered) return; entered = true;
     clearTimeout(autoEnter);
     $('#entry').classList.add('gone');
-    setTimeout(() => { const r = RG.one; frame(r.x, r.y, r.w, r.h); mark('one'); }, 240);
-    // First arrival gets the invitation once; the ? button reopens it forever after.
-    try {
-      if (!localStorage.getItem('muro.welcomed')){
-        setTimeout(() => { collectiveSheet(); localStorage.setItem('muro.welcomed','1'); }, 1400);
-      }
-    } catch {}
+    if (!document.body.classList.contains('universe'))
+      setTimeout(() => { const r = RG.one; frame(r.x, r.y, r.w, r.h); mark('one'); }, 240);
+    welcomeOnce();
   };
   const autoEnter = setTimeout(enter, 4200);
   $('#entry').addEventListener('click', enter, { once:true });
@@ -1078,7 +1085,7 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
 
   /* ── load ──────────────────────────────────────────────────── */
   async function load(){
-    if (!HANDLE){ await openUniverse(false); return; }   // the front door is everybody
+    if (!HANDLE){ await openUniverse(false, true); return; }  // the front door is everybody
     const { data, error } = await db.rpc('get_wall', { p_handle: HANDLE });
     const row = Array.isArray(data) ? data[0] : data;
     if (error || !row){
@@ -1293,11 +1300,13 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
 
   const LABEL = { mine:'you', granted:'open', pending:'knocked', denied:'not yet' };
 
-  async function openUniverse(push){
+  async function openUniverse(push, keepEntry){
     document.body.classList.add('universe');
     document.getElementById('uhint').style.display = '';
     document.getElementById('ucount').style.display = '';
-    $('#entry').classList.add('gone');
+    // On first load the splash is still up and it IS the act of entering —
+    // let enter() dismiss it, so the welcome fires on its way through.
+    if (!keepEntry) $('#entry').classList.add('gone');
     if (push) history.pushState({ u:1 }, '', '/');
     const { data, error } = await db.rpc('directory');
     if (error){ toast('Could not reach the universe'); return; }
