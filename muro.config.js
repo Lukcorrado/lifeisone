@@ -33,10 +33,10 @@ window.MURO_CONFIG = {
 
   /* Six wavelengths. One light. Change a hex and everything re-tunes. */
   regions: [
-    { key:"one",   name:"ONE",   sub:"la vida es una",              color:"#F7F3EA", x:2000, y:1000, w: 900, h: 700 },
+    { key:"one",   name:"ONE",   sub:"public · everyone can see",   color:"#F7F3EA", x:1925, y: 860, w:1050, h:1050, shape:"circle" },
     { key:"make",  name:"MAKE",  sub:"code · products · ventures",  color:"#2E5BFF", x: 250, y: 250, w:1400, h: 900 },
     { key:"sound", name:"SOUND", sub:"music · vinyl · noise",       color:"#FF4D2E", x:2000, y:  60, w:1300, h: 800 },
-    { key:"paint", name:"PAINT", sub:"canvas · colour · hands",     color:"#E4489B", x:3550, y: 250, w:1250, h: 900 },
+    { key:"art",   name:"ART",   sub:"canvas · colour · hands",     color:"#E4489B", x:3550, y: 250, w:1250, h: 900 },
     { key:"mind",  name:"MIND",  sub:"books · thinking · notes",    color:"#2F8F5B", x: 250, y:1500, w:1350, h: 900 },
     { key:"voice", name:"VOICE", sub:"podcast · words out loud",    color:"#F5A623", x:2050, y:1950, w:1250, h: 800 },
     { key:"life",  name:"LIFE",  sub:"amsterdam · people · style",  color:"#7B5CFF", x:3550, y:1500, w:1300, h: 950 },
@@ -45,10 +45,10 @@ window.MURO_CONFIG = {
   items: [
 
     /* ── ONE ─────────────────────────────────────────────────────────── */
-    { id:"manifesto", region:"one", kind:"words", tone:"manifesto", x:2090, y:1150, w:720, h:420, rot:0,
+    { id:"manifesto", region:"one", pub:true, kind:"words", tone:"manifesto", x:2090, y:1150, w:720, h:420, rot:0,
       text:"I am not <em>an economist</em>.<br>I am not <em>a founder</em>.<br>I am not <em>a painter</em>, <em>a coder</em>, <em>a voice</em>.<br><br>I am the one life all of that happens in." },
 
-    { id:"one-note", region:"one", kind:"note", x:2560, y:900, w:270, h:150, rot:-3,
+    { id:"one-note", region:"one", pub:true, kind:"note", x:2560, y:900, w:270, h:150, rot:-3,
       text:"la vida es una — you only get the one. so stop spending it being a single thing." },
 
     /* ── MAKE ────────────────────────────────────────────────────────── */
@@ -78,13 +78,13 @@ window.MURO_CONFIG = {
 
     /* ── PAINT ───────────────────────────────────────────────────────── */
     // TODO → replace url with photos of your actual paintings
-    { id:"paint1", region:"paint", kind:"image", x:3630, y:420, w:330, h:400, rot:-2,
+    { id:"paint1", region:"art", kind:"image", x:3630, y:420, w:330, h:400, rot:-2,
       url:"", title:"Untitled" },
-    { id:"paint2", region:"paint", kind:"image", x:4010, y:450, w:300, h:330, rot:1.6,
+    { id:"paint2", region:"art", kind:"image", x:4010, y:450, w:300, h:330, rot:1.6,
       url:"", title:"Untitled" },
-    { id:"paint-words", region:"paint", kind:"words", tone:"plain", x:4360, y:430, w:360, h:250, rot:-1,
+    { id:"paint-words", region:"art", kind:"words", tone:"plain", x:4360, y:430, w:360, h:250, rot:-1,
       text:"<b>Paint.</b> The only thing I make that nobody can ship, scale or A/B test. That's the point of it." },
-    { id:"ig-paint", region:"paint", kind:"link", x:3660, y:880, w:340,
+    { id:"ig-paint", region:"art", kind:"link", x:3660, y:880, w:340,
       url:"https://www.instagram.com/", title:"More on Instagram", sub:"9,000 of you are already here", rot:2 },
 
     /* ── MIND ────────────────────────────────────────────────────────── */

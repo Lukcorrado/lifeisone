@@ -54,7 +54,37 @@ button{font-family:inherit}
 #world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
 
 /* ── regions ────────────────────────────────────────────────── */
-.region{position:absolute;border-radius:64px;pointer-events:none}
+/* ── regions ──────────────────────────────────────────────────
+   A region is a coloured area of one continuous space. ONE is the
+   exception: it is a circle, it sits in the middle, and it is the
+   only region that is PUBLIC — anything whose centre lands inside
+   it is visible to everyone on Life Is One. Everything else is his
+   alone. See inPublic() / syncPub().
+   ─────────────────────────────────────────────────────────────── */
+.region{position:absolute;border-radius:64px;pointer-events:none;
+  transition:box-shadow .25s ease}
+.region.circle{border-radius:50%}
+.region.circle .label{left:0;right:0;top:12%;text-align:center;font-size:150px}
+.region.circle .sub{left:0;right:0;top:calc(12% + 150px);text-align:center}
+/* the public one reads as live: a solid ring instead of a dashed one */
+.region.pubzone .ring{border-style:solid;border-width:2px;opacity:.5}
+.region.pubzone .glow{opacity:.2}
+.region .live{position:absolute;left:50%;bottom:9%;transform:translateX(-50%);
+  display:none;align-items:center;gap:7px;padding:7px 14px;border-radius:99px;
+  background:rgba(18,16,15,.86);border:1px solid rgba(255,255,255,.14);
+  font-size:9.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--paper);white-space:nowrap}
+.region.pubzone .live{display:inline-flex}
+.region .live b{width:7px;height:7px;border-radius:50%;background:#06D6A0;
+  box-shadow:0 0 0 4px rgba(6,214,160,.22);animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 9px rgba(6,214,160,0)}}
+/* in edit mode a region can be picked up by its name and moved, items and all */
+body.edit .region .label,body.edit .region .sub{pointer-events:auto;cursor:grab;
+  transition:opacity .18s ease}
+body.edit .region .label:hover{opacity:.34}
+body.edit .region.dragging{box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 55%,transparent)}
+/* a card that is currently public wears the ring too */
+.card.pub{box-shadow:var(--lift),0 0 0 2px rgba(6,214,160,.55)}
 .region .glow{position:absolute;inset:0;border-radius:inherit;opacity:.14;
   filter:blur(90px);background:var(--c)}
 .region .ring{position:absolute;inset:0;border-radius:inherit;
@@ -346,7 +376,7 @@ body.edit #tip{display:none}
   <button id="zFit" title="Fit everything">⤢</button>
 </div>
 
-<div id="tip">drag to move through the room · scroll to zoom · press <b>E</b> to edit</div>
+<div id="tip">drag to move · scroll to zoom · <b>E</b> to edit · drop into <b>ONE</b> to go public</div>
 <div id="toast"></div>
 <div id="modal"><div class="sh" id="modalc"></div></div>
 
@@ -445,11 +475,14 @@ function paint(){
   world.style.width = (bx+bw+400)+'px'; world.style.height = (by+bh+400)+'px';
   CFG.regions.forEach(r => {
     const d = document.createElement('div');
-    d.className = 'region'; d.dataset.k = r.key;
+    d.className = 'region' + (r.shape === 'circle' ? ' circle' : '') + (r.key === 'one' ? ' pubzone' : '');
+    d.dataset.k = r.key;
     d.style.cssText = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;--c:${r.color}`;
     d.innerHTML = `<div class="glow"></div><div class="ring"></div>
-      <div class="label">${r.name}</div><div class="sub">${r.sub}</div>`;
+      <div class="label">${r.name}</div><div class="sub">${r.sub}</div>
+      <div class="live"><b></b>Live · anyone can see this</div>`;
     world.appendChild(d);
+    hookRegion(d, r);
   });
   CFG.items.forEach(drawItem);
 }
@@ -485,6 +518,7 @@ function drawItem(it){
   if (!el){ el = document.createElement('div'); el.className='card'; el.id='c_'+it.id; world.appendChild(el); }
   const p = it.kind === 'link' ? prov(it.url) : null;
   if (!it.h) it.h = Math.round(it.w / (p ? p.r : 1.3));
+  el.classList.toggle('pub', !!it.pub);
   el.style.cssText = `left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;`
     + `transform:rotate(${it.rot||0}deg);--c:${p ? p.c : r.color};z-index:${it.z||5}`;
   el.innerHTML = `<div class="hdr"><span class="dot"></span><b>${esc(p?p.l:it.kind)}</b>
@@ -554,6 +588,70 @@ function drawItem(it){
   hookItem(el, it);
 }
 
+/* ── what is public ──────────────────────────────────────────────
+   ONE is the shop window. An item is public when its CENTRE lands
+   inside ONE — centre, not corners, so a card that merely overhangs
+   the edge doesn't accidentally go live. Drag it out and it is his
+   again. The client only decides what to STORE; get_wall() in
+   Postgres is what actually withholds private items from visitors,
+   so this can never become fake privacy.
+   ──────────────────────────────────────────────────────────────── */
+const oneRegion = () => CFG.regions.find(r => r.key === 'one');
+function inPublic(it){
+  const o = oneRegion(); if (!o) return false;
+  const cx = it.x + it.w/2, cy = it.y + it.h/2;
+  const rx = o.w/2, ry = o.h/2;
+  if (o.shape === 'circle'){
+    const dx = (cx - (o.x+rx))/rx, dy = (cy - (o.y+ry))/ry;
+    return dx*dx + dy*dy <= 1;
+  }
+  return cx > o.x && cx < o.x+o.w && cy > o.y && cy < o.y+o.h;
+}
+function syncPub(it, el, announce){
+  const was = !!it.pub, now = inPublic(it);
+  it.pub = now;
+  el = el || document.getElementById('c_'+it.id);
+  if (el) el.classList.toggle('pub', now);
+  if (announce && was !== now)
+    toast(now ? 'Public — everyone on Life Is One can see this now'
+              : 'Private again — this is yours alone');
+}
+const syncAllPub = () => CFG.items.forEach(it => syncPub(it, null, false));
+
+/* ── regions move too ────────────────────────────────────────────
+   Pick a region up by its name and the whole neighbourhood travels
+   with it — otherwise dragging MAKE would leave its cards stranded.
+   ──────────────────────────────────────────────────────────────── */
+function hookRegion(el, r){
+  const grip = el.querySelector('.label');
+  grip.addEventListener('pointerdown', e => {
+    if (!EDIT) return;
+    e.preventDefault(); e.stopPropagation(); grip.setPointerCapture(e.pointerId);
+    el.classList.add('dragging');
+    const sx = e.clientX, sy = e.clientY, ox = r.x, oy = r.y;
+    const mine = CFG.items.filter(it => it.region === r.key)
+                          .map(it => ({ it, ix: it.x, iy: it.y }));
+    const mv = ev => {
+      const dx = (ev.clientX - sx)/VIEW.k, dy = (ev.clientY - sy)/VIEW.k;
+      r.x = ox + dx; r.y = oy + dy;
+      el.style.left = r.x + 'px'; el.style.top = r.y + 'px';
+      mine.forEach(({ it, ix, iy }) => {
+        it.x = ix + dx; it.y = iy + dy;
+        const c = document.getElementById('c_'+it.id);
+        if (c){ c.style.left = it.x+'px'; c.style.top = it.y+'px'; }
+      });
+      if (r.key === 'one') syncAllPub();      // the window itself moved
+      else mine.forEach(({ it }) => syncPub(it, null, false));
+    };
+    const up = () => {
+      el.classList.remove('dragging');
+      syncAllPub();
+      grip.removeEventListener('pointermove', mv); grip.removeEventListener('pointerup', up);
+    };
+    grip.addEventListener('pointermove', mv); grip.addEventListener('pointerup', up);
+  });
+}
+
 /* ── editing ────────────────────────────────────────────────── */
 function hookItem(el, it){
   const handle = el.querySelector('.hdr b'), rz = el.querySelector('.rz');
@@ -569,8 +667,12 @@ function hookItem(el, it){
       const near = CFG.regions.find(r => it.x+it.w/2 > r.x && it.x+it.w/2 < r.x+r.w
                                        && it.y+it.h/2 > r.y && it.y+it.h/2 < r.y+r.h);
       if (near) it.region = near.key;
+      el.classList.toggle('pub', inPublic(it));   // the ring lights up as you cross
     };
-    const up = () => { handle.removeEventListener('pointermove',mv); handle.removeEventListener('pointerup',up); };
+    const up = () => {
+      syncPub(it, el, true);            // crossed into ONE, or back out of it
+      handle.removeEventListener('pointermove',mv); handle.removeEventListener('pointerup',up);
+    };
     handle.addEventListener('pointermove',mv); handle.addEventListener('pointerup',up);
   });
   el.querySelectorAll('.hdr button').forEach(b => b.addEventListener('click', e => {
@@ -783,7 +885,7 @@ function collectiveSheet(){
   <div class="sw">
     <span style="background:#2E5BFF;color:#F7F3EA">Make</span>
     <span style="background:#FF4D2E;color:#F7F3EA">Sound</span>
-    <span style="background:#E4489B;color:#F7F3EA">Paint</span>
+    <span style="background:#E4489B;color:#F7F3EA">Art</span>
     <span style="background:#2F8F5B;color:#F7F3EA">Mind</span>
     <span style="background:#F5A623">Voice</span>
     <span style="background:#7B5CFF;color:#F7F3EA">Life</span>
@@ -794,8 +896,10 @@ function collectiveSheet(){
 
   <h3>How it works</h3>
   <p>Everyone here gets a wall at <code>lifeisone.co/yourname</code> and arranges it themselves.
-  No feed. No ranking. Nothing decides what surfaces except the person who built the room.
-  Put the loud thing in the middle if it's loud.</p>
+  No feed. No ranking. Nothing decides what surfaces except the person who built the room.</p>
+  <p>The circle in the middle — <b>ONE</b> — is the only part anyone else can see. Drag something
+  into it and it goes live to the network. Drag it back out and it's yours again. Everything
+  outside the circle never leaves your own room.</p>
 
   <h3>How you get in</h3>
   <p>Someone already here hands you a code. That's the whole gate — not exclusivity, just
@@ -906,6 +1010,7 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
     document.title = CFG.identity.seoTitle || CFG.identity.name || 'MURO';
     $('#signame').textContent = CFG.identity.name || '';
     $('#sigtag').textContent  = CFG.identity.tag  || '';
+    syncAllPub();
     buildNav(); paint(); fitAll(false); mark('all');
   }
 
