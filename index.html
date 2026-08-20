@@ -96,6 +96,10 @@ body.edit .region .label,body.edit .region .sub{pointer-events:auto;cursor:grab;
   transition:opacity .18s ease}
 body.edit .region .label:hover{opacity:.34}
 body.edit .region.dragging{box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 55%,transparent)}
+/* dragging a picture over the wall */
+body.dropping #room:before{background:rgba(46,91,255,.1);
+  box-shadow:inset 0 0 0 3px rgba(247,243,234,.5)}
+body.dropping #tip{display:block;color:var(--paper)}
 /* a card that is currently public wears the ring too */
 .card.pub{box-shadow:var(--lift),0 0 0 2px rgba(6,214,160,.55)}
 
@@ -726,7 +730,16 @@ function drawItem(it){
     if (it.url) d.style.backgroundImage = `url("${it.url}")`;
     else d.style.cssText += `background:repeating-linear-gradient(45deg,${r.color}22 0 12px,transparent 12px 24px);
       display:grid;place-items:center;color:${r.color};font-size:12px;letter-spacing:.16em;text-transform:uppercase`;
-    if (!it.url) d.textContent = 'add an image url';
+    if (!it.url) d.textContent = EDIT ? 'click to add a picture' : 'add an image url';
+    if (!it.url) d.style.cursor = 'pointer';
+    d.addEventListener('click', e => {
+      if (!EDIT || it.url) return;
+      e.stopPropagation();
+      // pictureSheet lives in the live layer's closure; in static mode
+      // (no Supabase) there is nowhere to put a picture anyway.
+      if (window.pictureSheet) window.pictureSheet(it);
+      else toast('Sign in to add pictures');
+    });
     box.appendChild(d);
   }
   else if (p && p.block){
@@ -1655,6 +1668,139 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
     };
     dock.appendChild(b); dock.appendChild(inp);
   }
+
+  /* ── pictures ─────────────────────────────────────────────────
+     Three ways in, because people already have their images
+     somewhere: drop the file, paste it out of the clipboard, or
+     hand over a URL that already works on their own site.
+
+     A URL costs nothing and stays live; a file is copied into
+     storage so it can't rot when the other site changes. Both end
+     up as the same kind of card.
+     ─────────────────────────────────────────────────────────── */
+  const IMG_MAX = 8 * 1024 * 1024;
+
+  async function uploadImage(file){
+    if (!ME) { toast('Sign in first'); return null; }
+    if (!/^image\//.test(file.type)) { toast(`${file.name || 'That file'} isn't an image`); return null; }
+    if (file.size > IMG_MAX){
+      toast(`${Math.round(file.size/1048576)}MB is too big — 8MB is the ceiling`); return null;
+    }
+    const clean = (file.name || 'paste.png').replace(/[^\w.-]/g, '_');
+    const path  = `${ME.id}/${Date.now()}-${clean}`;
+    const { error } = await db.storage.from('muro').upload(path, file, { cacheControl:'31536000' });
+    if (error){ toast('Upload failed: ' + error.message); return null; }
+    return db.storage.from('muro').getPublicUrl(path).data.publicUrl;
+  }
+
+  // Give a card a picture and let the picture decide the card's shape.
+  function setPicture(it, url){
+    const probe = new Image();
+    probe.onload = () => {
+      it.url = url;
+      it.h = Math.round(it.w * probe.height / probe.width);
+      drawItem(it); syncPub(it, null, false);
+      toast('There it is — Save to keep it');
+    };
+    probe.onerror = () => toast("That image wouldn't load. Is the link public?");
+    probe.src = url;
+  }
+
+  async function placePicture(url, at){
+    const probe = new Image();
+    probe.onload = () => {
+      const w = 340;
+      const it = addItem({ kind:'image', url, w, h: Math.round(w * probe.height / probe.width) });
+      if (at){ it.x = at.x - w/2; it.y = at.y - it.h/2; }
+      drawItem(it); syncPub(it, null, false);
+    };
+    probe.onerror = () => toast("That image wouldn't load. Is the link public?");
+    probe.src = url;
+  }
+
+  window.pictureSheet = pictureSheet;
+  function pictureSheet(it){
+    modal('Add a picture', `
+      <p>Paste a link to an image that's already on the web — your own site, anywhere —
+      or choose a file and it'll be copied here so it can't disappear later.</p>
+      <p><input id="imUrl" placeholder="https://yoursite.com/painting.jpg"
+         style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(247,243,234,.2);
+                background:rgba(255,255,255,.06);color:#F7F3EA;font:inherit;font-size:15px"></p>
+      <p><button class="pb hero" id="imGo">Use this link</button>
+         <button class="pb" id="imFile">Choose a file…</button></p>
+      <p class="quiet" style="font-size:13px;color:#9A938A">You can also drag an image straight
+      onto the wall, or copy one and press ⌘V. Right-click an image on your own site and choose
+      <b>Copy Image Address</b> to get its link.</p>
+      <p id="imMsg" style="color:#EF476F;font-size:13px"></p>`);
+    $('#imUrl').focus();
+    $('#imGo').onclick = () => {
+      const u = $('#imUrl').value.trim();
+      if (!/^https?:\/\//i.test(u)) return $('#imMsg').textContent = 'That needs to start with http.';
+      $('#modal').classList.remove('on');
+      it ? setPicture(it, u) : placePicture(u);
+    };
+    $('#imFile').onclick = () => {
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*';
+      inp.onchange = async () => {
+        if (!inp.files[0]) return;
+        $('#imMsg').textContent = 'Uploading…';
+        const url = await uploadImage(inp.files[0]);
+        if (!url) return;
+        $('#modal').classList.remove('on');
+        it ? setPicture(it, url) : placePicture(url);
+      };
+      inp.click();
+    };
+  }
+
+  /* drop a file, or an image dragged out of another tab */
+  const worldPoint = e => ({
+    x: (e.clientX - VIEW.x) / VIEW.k,
+    y: (e.clientY - VIEW.y) / VIEW.k,
+  });
+  ['dragenter','dragover'].forEach(t => addEventListener(t, e => {
+    if (!EDIT || !MINE) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+    document.body.classList.add('dropping');
+  }));
+  ['dragleave','drop'].forEach(t => addEventListener(t, e => {
+    if (t === 'dragleave' && e.relatedTarget) return;
+    document.body.classList.remove('dropping');
+  }));
+  addEventListener('drop', async e => {
+    if (!EDIT || !MINE) return;
+    e.preventDefault();
+    const at = worldPoint(e);
+    const files = [...(e.dataTransfer.files || [])].filter(f => /^image\//.test(f.type));
+    if (files.length){
+      toast(files.length > 1 ? `Uploading ${files.length} images…` : 'Uploading…');
+      for (const f of files){ const url = await uploadImage(f); if (url) await placePicture(url, at); }
+      return;
+    }
+    // dragged from another browser tab: we get a URL, not a file
+    const url = (e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text') || '').trim();
+    if (/^https?:\/\//i.test(url)) placePicture(url, at);
+  });
+
+  /* paste an image, or an image link, straight onto the wall */
+  addEventListener('paste', async e => {
+    if (!EDIT || !MINE) return;
+    if (e.target.isContentEditable || /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+    const item = [...(e.clipboardData?.items || [])].find(i => /^image\//.test(i.type));
+    if (item){
+      e.preventDefault();
+      toast('Uploading…');
+      const url = await uploadImage(item.getAsFile());
+      if (url) placePicture(url);
+      return;
+    }
+    const txt = (e.clipboardData?.getData('text') || '').trim();
+    if (/^https?:\/\/\S+\.(png|jpe?g|gif|webp|avif|svg)(\?\S*)?$/i.test(txt)){
+      e.preventDefault();
+      placePicture(txt);
+    }
+  });
 
   /* ── enrich pasted links via the edge function ─────────────── */
   const FN = `${S.url}/functions/v1/resolve`;
