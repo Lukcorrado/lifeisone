@@ -85,6 +85,39 @@ body.edit .region .label:hover{opacity:.34}
 body.edit .region.dragging{box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 55%,transparent)}
 /* a card that is currently public wears the ring too */
 .card.pub{box-shadow:var(--lift),0 0 0 2px rgba(6,214,160,.55)}
+
+/* ── RAÍZ — the locked ground ────────────────────────────────────
+   A lock is just a region with a code. Same centre-inside-shape rule
+   as ONE, inverted: what lands in here is encrypted in the browser
+   before it ever reaches the database.
+   ─────────────────────────────────────────────────────────────── */
+.region.locked .ring{border-style:solid;border-width:1.5px;opacity:.4;
+  border-color:color-mix(in srgb,var(--c) 60%,transparent)}
+.region.locked .glow{opacity:.09}
+.region.locked .label{opacity:.13}
+.region .key{position:absolute;left:50%;bottom:9%;transform:translateX(-50%);
+  display:none;align-items:center;gap:8px;padding:8px 15px;border-radius:99px;
+  background:rgba(12,11,10,.9);border:1px solid color-mix(in srgb,var(--c) 40%,transparent);
+  font-size:9.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--c);white-space:nowrap;cursor:pointer;pointer-events:auto}
+.region.locked .key{display:inline-flex}
+.region .key:hover{background:rgba(24,21,19,.96)}
+.region.open .key{color:#06D6A0;border-color:rgba(6,214,160,.5)}
+/* a card whose words are still ciphertext */
+.card.sealed{background:#141211;display:grid;place-items:center;
+  box-shadow:var(--lift),0 0 0 1px color-mix(in srgb,var(--c) 34%,transparent)}
+.card.sealed .in{display:grid;place-items:center;gap:8px;text-align:center;padding:18px}
+.card.sealed .lk2{font-size:22px;opacity:.5}
+.card.sealed .cap{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--mist)}
+.card.priv{box-shadow:var(--lift),0 0 0 2px color-mix(in srgb,var(--c) 55%,transparent)}
+/* the code pad */
+.pin{display:flex;gap:8px;justify-content:center;margin:18px 0 6px}
+.pin input{all:unset;width:46px;height:58px;text-align:center;font-family:var(--mono);
+  font-size:24px;color:var(--paper);background:rgba(255,255,255,.06);border-radius:12px;
+  border:1px solid rgba(247,243,234,.16)}
+.pin input:focus{border-color:var(--paper);background:rgba(255,255,255,.1)}
+.warn{border:1px solid rgba(239,71,111,.45);background:rgba(239,71,111,.08);
+  border-radius:12px;padding:13px 15px;font-size:13px;line-height:1.55;color:#ffd9e2}
 .region .glow{position:absolute;inset:0;border-radius:inherit;opacity:.14;
   filter:blur(90px);background:var(--c)}
 .region .ring{position:absolute;inset:0;border-radius:inherit;
@@ -445,6 +478,7 @@ body.universe #room{display:none}
   <button class="pb hero" id="dAdd">Pin</button>
   <button class="pb" id="dNote">Note</button>
   <button class="pb" id="dText">Words</button>
+  <button class="pb" id="dLock">⬤ RAÍZ</button>
   <button class="pb" id="dExport">⇩ Config</button>
 </div>
 
@@ -554,14 +588,18 @@ function paint(){
   world.style.width = (bx+bw+400)+'px'; world.style.height = (by+bh+400)+'px';
   CFG.regions.forEach(r => {
     const d = document.createElement('div');
-    d.className = 'region' + (r.shape === 'circle' ? ' circle' : '') + (r.key === 'one' ? ' pubzone' : '');
+    d.className = 'region' + (r.shape === 'circle' ? ' circle' : '')
+      + (r.key === 'one' ? ' pubzone' : '') + (r.locked ? ' locked' : '')
+      + (r.locked && isOpen(r) ? ' open' : '');
     d.dataset.k = r.key;
     d.style.cssText = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;--c:${r.color}`;
     d.innerHTML = `<div class="glow"></div><div class="ring"></div>
       <div class="label">${r.name}</div><div class="sub">${r.sub}</div>
-      <div class="live"><b></b>Live · anyone can see this</div>`;
+      <div class="live"><b></b>Live · anyone can see this</div>
+      <div class="key">${r.locked ? (isOpen(r) ? '○ open · click to close' : '⬤ locked · click to open') : ''}</div>`;
     world.appendChild(d);
     hookRegion(d, r);
+    if (r.locked) d.querySelector('.key').onclick = e => { e.stopPropagation(); askCode(r); };
   });
   CFG.items.forEach(drawItem);
 }
@@ -599,6 +637,17 @@ function drawItem(it){
   const p = it.kind === 'link' ? prov(it.url) : null;
   if (!it.h) it.h = Math.round(it.w / (p ? p.r : 1.3));
   el.classList.toggle('pub', !!it.pub);
+  el.classList.toggle('priv', !!it.priv);
+  // sealed and unopened: draw the shape of the thing, never the thing
+  const lk = it.lock && RG[it.lock];
+  if (it.enc && lk && !isOpen(lk)){
+    el.className = 'card sealed';
+    el.style.cssText = `left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;`
+      + `transform:rotate(${it.rot||0}deg);--c:${lk.color};z-index:${it.z||5}`;
+    el.innerHTML = `<div class="in"><div class="lk2">⬤</div>
+      <div class="cap">sealed in ${esc(lk.name)}</div></div>`;
+    return;
+  }
   el.style.cssText = `left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;`
     + `transform:rotate(${it.rot||0}deg);--c:${p ? p.c : r.color};z-index:${it.z||5}`;
   el.innerHTML = `<div class="hdr"><span class="dot"></span><b>${esc(p?p.l:it.kind)}</b>
@@ -675,6 +724,180 @@ function drawItem(it){
   hookItem(el, it);
 }
 
+/* ── RAÍZ — locks, and the crypto behind them ────────────────────
+   A locked region holds a salt and a verifier, never the code. The
+   code becomes an AES-GCM key in your browser via PBKDF2; the words
+   and links of anything inside are sealed with it before they are
+   saved. The database stores ciphertext it cannot read, which is
+   also why there is no reset: lose the code and it is gone.
+
+   What is NOT hidden: how many cards are in there, and where they
+   sit. Geometry has to stay in the clear for the wall to draw at
+   all. The content does not.
+   ─────────────────────────────────────────────────────────────── */
+const TE = new TextEncoder(), TD = new TextDecoder();
+const KEYS = {};                    // region key -> CryptoKey, this session only
+const b64e = b => btoa(String.fromCharCode(...new Uint8Array(b)));
+const b64d = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+const SEALED_FIELDS = ['text', 'url', 'tone', 'paper'];
+
+async function keyFrom(code, saltB64){
+  const base = await crypto.subtle.importKey('raw', TE.encode(code), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt:b64d(saltB64), iterations:250000, hash:'SHA-256' },
+    base, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
+}
+async function seal(key, obj){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, TE.encode(JSON.stringify(obj)));
+  return b64e(iv) + '.' + b64e(ct);
+}
+async function unseal(key, blob){
+  const [i, c] = String(blob).split('.');
+  const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv:b64d(i) }, key, b64d(c));
+  return JSON.parse(TD.decode(pt));
+}
+
+const lockedRegions = () => CFG.regions.filter(r => r.locked);
+function lockAt(it){                       // which lock is this card standing in?
+  const cx = it.x + it.w/2, cy = it.y + it.h/2;
+  return lockedRegions().find(r => {
+    const rx = r.w/2, ry = r.h/2;
+    if (r.shape === 'circle'){
+      const dx = (cx - (r.x+rx))/rx, dy = (cy - (r.y+ry))/ry;
+      return dx*dx + dy*dy <= 1;
+    }
+    return cx > r.x && cx < r.x+r.w && cy > r.y && cy < r.y+r.h;
+  });
+}
+const isOpen = r => !!KEYS[r.key];
+
+/* six digits, twice, with the warning spelled out */
+function newLock(){
+  const pad = id => `<div class="pin">${[0,1,2,3,4,5].map(i =>
+    `<input id="${id}${i}" inputmode="numeric" maxlength="1" pattern="[0-9]">`).join('')}</div>`;
+  modal('Set a six-digit code', `
+    <p>This becomes the key to a <b>RAÍZ</b> — a patch of ground nobody but you
+    can read. Anything you drag into it is encrypted in this browser before it
+    is saved.</p>
+    ${pad('a')}
+    <p style="font-size:12px;color:#9A938A;text-align:center;margin:2px 0 14px">once more</p>
+    ${pad('b')}
+    <div class="warn"><b>There is no way back from a forgotten code.</b>
+      Not a reset link, not me, not the database — it stores only ciphertext.
+      Write it down somewhere real before you continue.</div>
+    <p style="margin-top:16px"><button class="pb hero" id="lkGo">Bury it</button></p>
+    <p id="lkMsg" style="color:#EF476F;font-size:13px"></p>`);
+  wirePad('a'); wirePad('b');
+  $('#lkGo').onclick = async () => {
+    const A = readPad('a'), B = readPad('b');
+    if (A.length !== 6) return $('#lkMsg').textContent = 'Six digits.';
+    if (A !== B)        return $('#lkMsg').textContent = "Those two don't match.";
+    const salt = b64e(crypto.getRandomValues(new Uint8Array(16)));
+    const key  = await keyFrom(A, salt);
+    const n    = lockedRegions().length;
+    const r = {
+      key: 'raiz' + (n ? '-' + (n+1) : ''),
+      name: 'RAÍZ' + (n ? ' ' + (n+1) : ''),
+      sub: 'locked · only you',
+      color: '#8A7B6B', shape: 'circle', locked: true, salt,
+      ...centreRegion(760),
+    };
+    r.check = await seal(key, { ok:'raiz', at:r.key });
+    KEYS[r.key] = key;
+    CFG.regions.push(r); RG[r.key] = r;
+    $('#modal').classList.remove('on');
+    buildNav(); paint(); frame(r.x, r.y, r.w, r.h);
+    toast('RAÍZ buried. Drag anything into it and it goes dark.');
+  };
+}
+function centreRegion(size){
+  const cx = (innerWidth/2 - VIEW.x)/VIEW.k, cy = (innerHeight/2 - VIEW.y)/VIEW.k;
+  return { x: Math.round(cx - size/2), y: Math.round(cy - size/2), w: size, h: size };
+}
+function wirePad(id){
+  for (let i = 0; i < 6; i++){
+    const el = document.getElementById(id + i);
+    el.addEventListener('input', () => {
+      el.value = el.value.replace(/\D/g,'');
+      if (el.value && i < 5) document.getElementById(id + (i+1)).focus();
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !el.value && i > 0) document.getElementById(id + (i-1)).focus();
+    });
+  }
+  document.getElementById(id + '0').focus();
+}
+const readPad = id => [0,1,2,3,4,5].map(i => document.getElementById(id+i).value).join('');
+
+/* open one for this session */
+function askCode(r){
+  if (isOpen(r)){ sealRegion(r); return; }
+  modal('Open ' + esc(r.name), `
+    <p>Six digits. It is never sent anywhere — it becomes a key right here.</p>
+    ${`<div class="pin">${[0,1,2,3,4,5].map(i =>
+      `<input id="u${i}" inputmode="numeric" maxlength="1" pattern="[0-9]">`).join('')}</div>`}
+    <p style="margin-top:14px"><button class="pb hero" id="uGo">Open</button></p>
+    <p id="uMsg" style="color:#EF476F;font-size:13px"></p>`);
+  wirePad('u');
+  $('#uGo').onclick = async () => {
+    const code = readPad('u');
+    if (code.length !== 6) return $('#uMsg').textContent = 'Six digits.';
+    $('#uGo').textContent = 'Opening…';
+    let key;
+    try {
+      key = await keyFrom(code, r.salt);
+      const v = await unseal(key, r.check);
+      if (v.ok !== 'raiz') throw new Error('bad');
+    } catch {
+      $('#uGo').textContent = 'Open';
+      return $('#uMsg').textContent = 'That is not the code.';
+    }
+    KEYS[r.key] = key;
+    await revealRegion(r);
+    $('#modal').classList.remove('on');
+    toast(r.name + ' is open — it closes again when you leave');
+  };
+}
+async function revealRegion(r){
+  const key = KEYS[r.key];
+  for (const it of CFG.items){
+    if (it.lock !== r.key || !it.enc) continue;
+    try { Object.assign(it, await unseal(key, it.enc)); } catch {}
+  }
+  paint();
+}
+function sealRegion(r){                     // shut it again without reloading
+  delete KEYS[r.key];
+  CFG.items.forEach(it => {
+    if (it.lock === r.key && it.enc) SEALED_FIELDS.forEach(f => delete it[f]);
+  });
+  paint();
+  toast(r.name + ' is closed');
+}
+
+/* everything inside a lock is sealed on its way out */
+async function sealItems(items){
+  const out = [];
+  for (const raw of items){
+    const it = { ...raw };
+    const r = lockAt(it);
+    if (!r){                                 // left the ground: it comes back into the light
+      delete it.lock; delete it.enc; delete it.priv;
+      out.push(it); continue;
+    }
+    it.lock = r.key; it.priv = true; it.pub = false;
+    if (KEYS[r.key]){
+      const payload = {};
+      SEALED_FIELDS.forEach(f => { if (it[f] !== undefined) payload[f] = it[f]; });
+      it.enc = await seal(KEYS[r.key], payload);
+      SEALED_FIELDS.forEach(f => delete it[f]);
+    }
+    out.push(it);                            // still shut: keep the ciphertext we loaded
+  }
+  return out;
+}
+
 /* ── what is public ──────────────────────────────────────────────
    ONE is the shop window. An item is public when its CENTRE lands
    inside ONE — centre, not corners, so a card that merely overhangs
@@ -695,7 +918,10 @@ function inPublic(it){
   return cx > o.x && cx < o.x+o.w && cy > o.y && cy < o.y+o.h;
 }
 function syncPub(it, el, announce){
-  const was = !!it.pub, now = inPublic(it);
+  const inLock = !!lockAt(it);
+  const was = !!it.pub, now = !inLock && inPublic(it);
+  it.priv = inLock;
+  if (inLock) it.lock = lockAt(it).key;
   it.pub = now;
   el = el || document.getElementById('c_'+it.id);
   if (el) el.classList.toggle('pub', now);
@@ -1009,6 +1235,7 @@ function collectiveSheet(){
     <li>No Meta or Google script runs when you arrive. That's a privacy decision and a speed one at once.</li>
   </ul>`);
 }
+$('#dLock').onclick = newLock;
 $('#tAbout').onclick = collectiveSheet;
 
 /* The invitation greets you on arrival — every arrival, not just the first.
@@ -1215,9 +1442,9 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
   /* ── save ──────────────────────────────────────────────────── */
   async function saveWall(){
     const btn = $('#mSave'); btn.textContent = 'Saving…';
+    const items = await sealItems(CFG.items.map(({ live, ...rest }) => rest));
     const { error } = await db.from('walls').update({
-      identity: CFG.identity, regions: CFG.regions,
-      items: CFG.items.map(({ live, ...rest }) => rest),   // don't persist "was playing"
+      identity: CFG.identity, regions: CFG.regions, items,
     }).eq('id', ROW.id);
     btn.textContent = 'Save';
     toast(error ? 'Save failed: ' + error.message : 'Saved');
