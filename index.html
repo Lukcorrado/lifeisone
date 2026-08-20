@@ -1586,9 +1586,28 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
         const { data: ok } = await db.rpc('claim_invite', { p_code: code });
         if (!ok) msg('that code is used or invalid — trying anyway');
       }
+      // Seed the STRUCTURE, never the contents. CFG is whichever wall this
+      // browser happens to have loaded, so copying its items would hand a
+      // newcomer somebody else's manifesto to live inside.
+      const nice = h.charAt(0).toUpperCase() + h.slice(1);
+      const one  = CFG.regions.find(r => r.key === 'one') || { x:1925, y:860, w:1050, h:1050 };
       const { data, error } = await db.from('walls').insert({
-        handle: h, owner: ME.id, identity: CFG.identity,
-        regions: CFG.regions, items: CFG.items, published: true,
+        handle: h, owner: ME.id,
+        identity: { name: nice, tag: 'Life Is One',
+                    seoTitle: nice + ' — Life Is One',
+                    seoDesc: 'La vida es una. One life, undivided.' },
+        regions: CFG.regions,
+        items: [
+          { id:'hello', region:'one', kind:'words', tone:'manifesto', pub:true,
+            x: Math.round(one.x + one.w/2 - 300), y: Math.round(one.y + one.h/2 - 110),
+            w:600, h:220, rot:0,
+            text:'I am ' + nice + '.<br>This is the part I am happy for anyone to see.' },
+          { id:'first-note', region:'one', kind:'note', pub:true,
+            x: Math.round(one.x + one.w/2 + 40), y: Math.round(one.y + 130),
+            w:260, h:150, rot:-3,
+            text:'press E, drag me somewhere better, then write over this.' },
+        ],
+        published: true,
       }).select().single();
       if (error) return msg(error.message.includes('policy') ? 'you need a valid invite code' : error.message);
       ROW = data; MINE = true; paintChrome();
