@@ -6,7 +6,7 @@ verify_jwt = false          # anonymous visitors' pasted links get resolved too
 
 [auth]
 # Magic links break silently if these are wrong (GO-LIVE step 6).
-site_url = "https://lifeisone.vercel.app"
+site_url = "https://lifeisone.co"
 additional_redirect_urls = [
   "http://localhost:8000",
   "https://lifeisone.vercel.app",
