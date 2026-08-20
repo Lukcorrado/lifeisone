@@ -1,0 +1,69 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#111;display:grid;place-items:start;overflow:hidden}
+  #card{position:relative;width:1200px;height:630px;overflow:hidden;
+    background:
+      radial-gradient(760px 560px at 26% 24%, rgba(46,91,255,.16), transparent 62%),
+      radial-gradient(700px 520px at 76% 74%, rgba(123,92,255,.18), transparent 62%),
+      radial-gradient(620px 480px at 60% 18%, rgba(255,77,46,.08), transparent 60%),
+      #0B0A0A;
+    font-family:"Inter",system-ui,sans-serif;color:#F7F3EA}
+  #stars i{position:absolute;border-radius:50%;background:#F7F3EA;display:block}
+  .ring{position:absolute;left:50%;top:50%;width:520px;height:520px;margin:-260px 0 0 -260px;
+    border-radius:50%;border:1px dashed rgba(247,243,234,.13)}
+  .mid{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+    text-align:center;padding:0 70px}
+  .es{font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:38px;
+    color:rgba(247,243,234,.62);letter-spacing:-.01em}
+  .en{font-family:"Instrument Serif",Georgia,serif;font-size:126px;line-height:1;
+    letter-spacing:-.035em;margin-top:12px}
+  .sub{margin-top:26px;font-size:19px;line-height:1.5;color:rgba(247,243,234,.66);
+    max-width:760px;margin-left:auto;margin-right:auto}
+  .sw{display:flex;gap:9px;justify-content:center;margin-top:32px}
+  .sw span{font-size:11px;font-weight:800;letter-spacing:.18em;padding:7px 13px;
+    border-radius:99px;color:#0E0D0C}
+  .foot{position:absolute;left:0;right:0;bottom:38px;text-align:center;font-size:12px;
+    letter-spacing:.34em;text-transform:uppercase;color:rgba(247,243,234,.4)}
+  .vig{position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,transparent 40%,rgba(0,0,0,.6) 100%)}
+</style></head><body>
+<div id="card">
+  <div id="stars"></div>
+  <div class="ring"></div>
+  <div class="vig"></div>
+  <div class="mid">
+    <svg width="128" height="72" viewBox="0 0 92 52" fill="none" style="margin-bottom:8px">
+      <path d="M2 26h26" stroke="#F7F3EA" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M28 26 46 6l18 20-18 20z" stroke="#F7F3EA" stroke-width="2" fill="none"/>
+      <path d="M64 14h26" stroke="#2F8F5B" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M64 20h26" stroke="#2E5BFF" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M64 26h26" stroke="#7B5CFF" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M64 32h26" stroke="#F5A623" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M64 38h26" stroke="#FF4D2E" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M64 44h26" stroke="#E4489B" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+    <div class="es">La vida es una.</div>
+    <div class="en">LIFE IS ONE</div>
+    <div class="sub">A collective of people who make more than one thing.<br>Everyone gets a room. You come in by invitation.</div>
+    <div class="sw">
+      <span style="background:#2E5BFF;color:#F7F3EA">MAKE</span>
+      <span style="background:#FF4D2E;color:#F7F3EA">SOUND</span>
+      <span style="background:#E4489B;color:#F7F3EA">ART</span>
+      <span style="background:#2F8F5B;color:#F7F3EA">MIND</span>
+      <span style="background:#F5A623">VOICE</span>
+      <span style="background:#7B5CFF;color:#F7F3EA">LIFE</span>
+    </div>
+  </div>
+  <div class="foot">lifeisone.co</div>
+</div>
+<script>
+  let h='';
+  for(let i=0;i<190;i++){
+    const d=(0.6+Math.random()*1.9).toFixed(2);
+    h+=`<i style="left:${(Math.random()*100).toFixed(2)}%;top:${(Math.random()*100).toFixed(2)}%;
+        width:${d}px;height:${d}px;opacity:${(0.25+Math.random()*0.6).toFixed(2)}"></i>`;
+  }
+  document.getElementById('stars').innerHTML=h;
+</script>
+</body></html>
