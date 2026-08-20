@@ -3,3 +3,21 @@ project_id = "llxuoaywxohqlfswaafq"
 
 [functions.resolve]
 verify_jwt = false          # anonymous visitors' pasted links get resolved too
+
+[auth]
+# Magic links break silently if these are wrong (GO-LIVE step 6).
+site_url = "https://lifeisone.vercel.app"
+additional_redirect_urls = [
+  "http://localhost:8000",
+  "https://lifeisone.vercel.app",
+  "https://lifeisone.co",
+  "https://www.lifeisone.co",
+]
+
+[auth.email]
+# Pinned to Supabase's server-side defaults. Without these the CLI pushes its
+# own (weaker) defaults on every `config push`: confirmations off, 1s send
+# rate limit, 6-digit OTP.
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
