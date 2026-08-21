@@ -393,6 +393,50 @@ body.universe #room{display:none}
   .kn{flex-wrap:wrap}
 }
 
+/* ── the nudge ────────────────────────────────────────────────
+   After the invitation is read, a quiet card slides in from the
+   right. It asks once, stays out of the way, and never comes back
+   after it's been dismissed.
+   ─────────────────────────────────────────────────────────────── */
+#nudge{
+  position:fixed;right:18px;top:50%;z-index:45;width:298px;max-width:calc(100vw - 36px);
+  transform:translate(calc(100% + 26px),-50%);opacity:0;pointer-events:none;
+  background:rgba(16,14,13,.93);backdrop-filter:blur(18px);
+  border:1px solid rgba(255,255,255,.12);border-radius:17px;padding:19px 19px 17px;
+  box-shadow:0 22px 60px rgba(0,0,0,.5);
+  transition:transform .5s cubic-bezier(.2,.9,.3,1),opacity .4s ease;
+}
+#nudge.on{transform:translate(0,-50%);opacity:1;pointer-events:auto}
+#nudge h4{font-family:var(--disp);font-weight:400;font-size:21px;margin:0 0 7px;
+  letter-spacing:-.01em;line-height:1.15}
+#nudge p{margin:0 0 15px;font-size:13.5px;line-height:1.58;color:rgba(247,243,234,.72)}
+#nudge .row{display:flex;gap:8px;align-items:center}
+#nudge .go{all:unset;cursor:pointer;flex:1;text-align:center;padding:11px 14px;border-radius:11px;
+  font-size:13.5px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,#8E6BFF,#6B4BE8);box-shadow:0 7px 20px rgba(123,92,255,.34)}
+#nudge .go:hover{background:linear-gradient(135deg,#9B7BFF,#7B5CFF)}
+#nudge .later{all:unset;cursor:pointer;padding:11px 12px;border-radius:11px;font-size:13px;
+  color:var(--mist)}
+#nudge .later:hover{color:var(--paper);background:rgba(255,255,255,.07)}
+#nudge .go:focus-visible,#nudge .later:focus-visible{outline:2px solid var(--paper);outline-offset:2px}
+@media(max-width:720px){
+  #nudge{right:12px;left:12px;width:auto;top:auto;
+    bottom:calc(126px + env(safe-area-inset-bottom));transform:translateY(calc(100% + 150px))}
+  #nudge.on{transform:translateY(0)}
+}
+@media (prefers-reduced-motion:reduce){ #nudge{transition:opacity .3s ease} }
+
+/* the numbered list inside the room sheet */
+#modal .walk{margin:14px 0 0;padding:0;list-style:none;counter-reset:w}
+#modal .walk li{counter-increment:w;position:relative;padding:0 0 0 40px;margin:0 0 15px;
+  font-size:14.5px;line-height:1.6;color:rgba(247,243,234,.84)}
+#modal .walk li:last-child{margin-bottom:0}
+#modal .walk li::before{
+  content:counter(w,decimal-leading-zero);position:absolute;left:0;top:1px;
+  font-family:var(--mono);font-size:11px;font-weight:600;color:var(--c,#9A938A);
+  letter-spacing:.04em}
+#modal .walk b{color:var(--paper)}
+
 /* ── entry ──────────────────────────────────────────────────── */
 #entry{position:fixed;inset:0;z-index:90;background:#0E0D0C;display:grid;place-items:center;
   transition:opacity .8s ease,visibility .8s}
@@ -534,6 +578,7 @@ body.universe #room{display:none}
 </div>
 
 <div id="tip">drag to move · scroll to zoom · <b>E</b> to edit · drop into <b>ONE</b> to go public</div>
+<div id="nudge" role="complementary" aria-live="polite"></div>
 <div id="toast"></div>
 <div id="modal"><div class="sh" id="modalc"></div></div>
 
@@ -1312,6 +1357,87 @@ function collectiveSheet(){
   </ul>`,
   `<button class="pb welcome" data-x>Welcome</button>`);
 }
+/* ── after the invitation, a nudge ────────────────────────────────
+   The collective sheet explains the place; it shouldn't also be the
+   thing that asks you to join. That ask arrives separately, a beat
+   later, from the side — where it can be ignored.
+   ──────────────────────────────────────────────────────────────── */
+function whenModalCloses(fn){
+  const m = $('#modal');
+  if (!m.classList.contains('on')) return fn();
+  const ob = new MutationObserver(() => {
+    if (!m.classList.contains('on')){ ob.disconnect(); fn(); }
+  });
+  ob.observe(m, { attributes:true, attributeFilter:['class'] });
+}
+
+function showNudge({ title, body, cta, onGo }){
+  const n = $('#nudge');
+  n.innerHTML = `<h4>${title}</h4><p>${body}</p>
+    <div class="row"><button class="go">${cta}</button>
+    <button class="later">Not now</button></div>`;
+  n.querySelector('.go').onclick    = () => { hideNudge(); onGo(); };
+  n.querySelector('.later').onclick = () => { hideNudge(true); };
+  // Force a layout read so the transition has a start state to move from.
+  // rAF would do it too, but rAF never fires in a backgrounded tab — and a
+  // nudge that silently fails to appear is worse than one that doesn't slide.
+  void n.offsetHeight;
+  n.classList.add('on');
+}
+function hideNudge(remember){
+  $('#nudge').classList.remove('on');
+  if (remember) try { sessionStorage.setItem('muro.nudged','1'); } catch {}
+}
+
+function signInNudge(){
+  try { if (sessionStorage.getItem('muro.nudged') === '1') return; } catch {}
+  if (window.__ME) return;
+  const inRoom = !document.body.classList.contains('universe');
+  showNudge({
+    title: 'Want a room of your own?',
+    body: inRoom
+      ? "You're seeing the public part of this wall. Sign in to knock on the door — and to claim a room of your own, if you were given a code."
+      : 'Doors in here open from the inside. Sign in to knock on one — and to claim a room of your own, if you were given a code.',
+    cta: 'Sign in',
+    onGo: () => window.signInSheet && window.signInSheet(),
+  });
+}
+
+/* ── the first time you stand in your own room ────────────────────
+   Not a checklist. The place works whatever order you do things in,
+   so this describes what's possible and gets out of the way.
+   ──────────────────────────────────────────────────────────────── */
+function roomWelcome(handle){
+  modal('This room is yours', `
+    <p class="lead">Nothing here is required, and there's no right order. This is just what the
+    room can do — take whichever part you feel like today.</p>
+    <ol class="walk" style="--c:#7B5CFF">
+      <li>Press <kbd>E</kbd>, or <b>✎ Edit</b>. Everything below only works while that's on —
+        the rest of the time your room just sits there and behaves.</li>
+      <li><b>Say something true.</b> Click straight into any text and write over it. The two
+        cards waiting for you are addressed to you, not to anyone else.</li>
+      <li><b>Bring your things in.</b> Paste any link into the dock and press <b>Pin</b> — a song,
+        a video, a shop, a post. Drop an image straight onto the wall, or paste one.</li>
+      <li><b>Put it where it belongs.</b> Drag a card by the bar across its top. Regions move
+        too — drag one by its big name and everything in it travels along.</li>
+      <li><b>Choose what the world sees.</b> Only the circle in the middle — <b>ONE</b> — is
+        public. Drag something in and strangers can see it; drag it out and it's yours again.</li>
+      <li><b>Keep it.</b> <b>Save</b>, or <kbd>⌘</kbd><kbd>S</kbd>. Until then it only exists in
+        this browser.</li>
+    </ol>
+    <p style="margin-top:18px;font-size:13.5px;color:#9A938A">When you want ground nobody can read —
+    not even people you've let in — <b>⬤ RAÍZ</b> in the dock buries a patch locked with six digits.
+    And the mark in the corner takes you back out to everyone else.</p>`,
+    `<button class="pb welcome" data-x>Let me at it</button>`);
+}
+
+function roomWelcomeOnce(handle){
+  const key = 'muro.room.' + handle;
+  try { if (localStorage.getItem(key) === '1') return; } catch {}
+  try { localStorage.setItem(key, '1'); } catch {}
+  whenModalCloses(() => setTimeout(() => roomWelcome(handle), 900));
+}
+
 $('#dLock').onclick = newLock;
 $('#tAbout').onclick = collectiveSheet;
 
@@ -1335,6 +1461,8 @@ async function welcomeOnce(delay){
     if ($('#modal').classList.contains('on')) return;
     collectiveSheet();
     try { localStorage.setItem('muro.read', '1'); } catch {}
+    // the ask arrives after the explanation, not inside it
+    whenModalCloses(() => setTimeout(signInNudge, 700));
   }, delay == null ? 1500 : delay);
 }
 
@@ -1446,8 +1574,12 @@ function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on
       const { data: own } = await db.from('walls').select('*').eq('owner', ME.id).maybeSingle();
       if (own && own.handle.toLowerCase() === HANDLE){ ROW = own; MINE = true; }
     }
+    window.__ME = ME;
+    window.signInSheet = signInSheet;
     paintChrome();
     refreshKnocks();
+    // standing in your own room for the first time
+    if (MINE && ROW && ROW.handle) roomWelcomeOnce(ROW.handle);
   }
   db.auth.onAuthStateChange(() => refreshMe());
 
